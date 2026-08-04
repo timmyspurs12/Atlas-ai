@@ -1,0 +1,52 @@
+{
+  "name": "atlas-ai",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Privacy-first real-time location sharing and safety platform",
+  "license": "UNLICENSED",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22.12.0",
+    "npm": ">=10.0.0"
+  },
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:mobile": "npm run start --workspace @atlas/mobile",
+    "dev:api": "npm run start:dev --workspace @atlas/api",
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "NODE_OPTIONS=--max-old-space-size=4096 eslint apps packages --max-warnings=0",
+    "test": "npm run test --workspaces --if-present",
+    "test:ci": "npm run test --workspaces --if-present -- --runInBand",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:generate": "npm run prisma:generate --workspace @atlas/api",
+    "db:migrate": "npm run prisma:migrate --workspace @atlas/api",
+    "db:seed": "npm run prisma:seed --workspace @atlas/api",
+    "compose:up": "docker compose -f infra/docker-compose.yml up -d",
+    "compose:down": "docker compose -f infra/docker-compose.yml down",
+    "prepare": "npm run build --workspace @atlas/contracts && npm run db:generate --if-present"
+  },
+  "overrides": {
+    "js-yaml": "5.2.3",
+    "react-native-gesture-handler": "2.32.0",
+    "react-native-reanimated": "4.5.1",
+    "react-native-safe-area-context": "5.7.0",
+    "react-native-svg": "15.15.4",
+    "react-native-worklets": "0.10.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.32.0",
+    "@types/node": "^24.1.0",
+    "eslint": "^9.32.0",
+    "eslint-plugin-react-hooks": "^6.0.0",
+    "expo-modules-core": "~57.0.9",
+    "globals": "^16.3.0",
+    "prettier": "^3.6.2",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.38.0"
+  }
+}

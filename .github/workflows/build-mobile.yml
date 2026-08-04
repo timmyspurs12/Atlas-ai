@@ -1,0 +1,45 @@
+name: Build Mobile
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        required: true
+        type: choice
+        options: [preview, production]
+  push:
+    tags: ['mobile-v*']
+
+concurrency:
+  group: mobile-${{ inputs.profile || 'production' }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  eas-build:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.profile || 'production' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+          cache: npm
+      - run: npm ci
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Validate native configuration
+        working-directory: apps/mobile
+        run: npx expo-doctor
+      - name: Queue signed iOS and Android builds
+        working-directory: apps/mobile
+        env:
+          EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL }}
+          EXPO_PUBLIC_SOCKET_URL: ${{ vars.EXPO_PUBLIC_SOCKET_URL }}
+          EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN: ${{ secrets.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN }}
+          RNMAPBOX_MAPS_DOWNLOAD_TOKEN: ${{ secrets.RNMAPBOX_MAPS_DOWNLOAD_TOKEN }}
+        run: eas build --platform all --profile "${{ inputs.profile || 'production' }}" --non-interactive --no-wait
