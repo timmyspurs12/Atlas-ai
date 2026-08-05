@@ -1,0 +1,10 @@
+node_modules
+dist
+build
+coverage
+.expo
+.cache
+apps/api/src/generated
+apps/api/prisma/migrations
+apps/mobile/android
+apps/mobile/ios

@@ -15,16 +15,25 @@ async function bootstrap(): Promise<void> {
   const config = app.get(ConfigService<Environment, true>);
   const logger = new Logger('Bootstrap');
 
-  app.useLogger(config.get('LOG_LEVEL', { infer: true }) === 'debug'
-    ? ['error', 'warn', 'log', 'debug']
-    : ['error', 'warn', 'log']);
+  app.useLogger(
+    config.get('LOG_LEVEL', { infer: true }) === 'debug'
+      ? ['error', 'warn', 'log', 'debug']
+      : ['error', 'warn', 'log'],
+  );
   app.setGlobalPrefix('v1');
-  app.enableVersioning({ type: VersioningType.HEADER, header: 'x-api-version', defaultVersion: '1' });
+  app.enableVersioning({
+    type: VersioningType.HEADER,
+    header: 'x-api-version',
+    defaultVersion: '1',
+  });
   app.enableShutdownHooks();
-  app.use(helmet({
-    crossOriginResourcePolicy: { policy: 'same-site' },
-    contentSecurityPolicy: config.get('NODE_ENV', { infer: true }) === 'production' ? undefined : false,
-  }));
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: 'same-site' },
+      contentSecurityPolicy:
+        config.get('NODE_ENV', { infer: true }) === 'production' ? undefined : false,
+    }),
+  );
   app.use(compression());
 
   const allowedOrigins = new Set(
@@ -36,10 +45,7 @@ async function bootstrap(): Promise<void> {
   app.enableCors({
     credentials: false,
     methods: ['GET', 'HEAD', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
-    origin(
-      origin: string | undefined,
-      callback: (error: Error | null, allow?: boolean) => void,
-    ) {
+    origin(origin: string | undefined, callback: (error: Error | null, allow?: boolean) => void) {
       if (!origin || allowedOrigins.has(origin)) callback(null, true);
       else callback(new Error('Origin not allowed'));
     },

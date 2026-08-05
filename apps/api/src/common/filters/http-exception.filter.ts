@@ -65,10 +65,12 @@ export class AllExceptionsFilter implements ExceptionFilter {
   }
 
   private toCode(message: string): string {
-    return message
-      .replace(/[^a-zA-Z0-9]+/g, '_')
-      .replace(/^_|_$/g, '')
-      .toUpperCase()
-      .slice(0, 80) || 'REQUEST_FAILED';
+    return (
+      message
+        .replace(/[^a-zA-Z0-9]+/g, '_')
+        .replace(/^_|_$/g, '')
+        .toUpperCase()
+        .slice(0, 80) || 'REQUEST_FAILED'
+    );
   }
 }

@@ -16,7 +16,10 @@ export class ChatService {
     private readonly encryption: EncryptionService,
   ) {}
 
-  async createDirect(userId: string, input: CreateDirectConversationDto): Promise<Record<string, unknown>> {
+  async createDirect(
+    userId: string,
+    input: CreateDirectConversationDto,
+  ): Promise<Record<string, unknown>> {
     const friendship = await this.prisma.friendship.findFirst({
       where: {
         status: FriendshipStatus.ACCEPTED,
@@ -93,7 +96,10 @@ export class ChatService {
     await this.assertMember(userId, conversationId);
     const messages = await this.prisma.message.findMany({
       where: { conversationId, deletedAt: null },
-      include: { receipts: { where: { deletedAt: null } }, attachments: { where: { deletedAt: null } } },
+      include: {
+        receipts: { where: { deletedAt: null } },
+        attachments: { where: { deletedAt: null } },
+      },
       orderBy: { sentAt: 'desc' },
       take: 100,
     });
@@ -111,10 +117,16 @@ export class ChatService {
     }));
   }
 
-  async send(userId: string, conversationId: string, input: SendMessageDto): Promise<Record<string, unknown>> {
+  async send(
+    userId: string,
+    conversationId: string,
+    input: SendMessageDto,
+  ): Promise<Record<string, unknown>> {
     await this.assertMember(userId, conversationId);
     const existing = await this.prisma.message.findUnique({
-      where: { senderId_clientMessageId: { senderId: userId, clientMessageId: input.clientMessageId } },
+      where: {
+        senderId_clientMessageId: { senderId: userId, clientMessageId: input.clientMessageId },
+      },
     });
     if (existing) return this.serializeMessage(existing);
 
@@ -137,7 +149,10 @@ export class ChatService {
           sentAt: new Date(),
         },
       });
-      await transaction.conversation.update({ where: { id: conversationId }, data: { updatedAt: new Date() } });
+      await transaction.conversation.update({
+        where: { id: conversationId },
+        data: { updatedAt: new Date() },
+      });
       const recipients = await transaction.conversationMember.findMany({
         where: { conversationId, userId: { not: userId }, deletedAt: null },
         select: { userId: true },
@@ -220,7 +235,9 @@ export class ChatService {
       senderId: message.senderId,
       conversationId: message.conversationId,
       type: message.type,
-      body: knownBody ?? (message.bodyCiphertext ? this.encryption.decryptUtf8(message.bodyCiphertext) : null),
+      body:
+        knownBody ??
+        (message.bodyCiphertext ? this.encryption.decryptUtf8(message.bodyCiphertext) : null),
       replyToMessageId: message.replyToMessageId,
       sentAt: message.sentAt,
     };

@@ -47,11 +47,11 @@ export class FriendsService {
           displayName: profile?.displayName ?? 'Atlas member',
           handle: profile?.handle ?? null,
           avatarUrl: profile?.avatarUrl ?? null,
-          lastSeenAt: profile?.showOnlineStatus ? other.lastSeenAt?.toISOString() ?? null : null,
+          lastSeenAt: profile?.showOnlineStatus ? (other.lastSeenAt?.toISOString() ?? null) : null,
           isOnline: Boolean(
             profile?.showOnlineStatus &&
-              other.lastSeenAt &&
-              Date.now() - other.lastSeenAt.getTime() < 60_000,
+            other.lastSeenAt &&
+            Date.now() - other.lastSeenAt.getTime() < 60_000,
           ),
         },
         createdAt: friendship.createdAt.toISOString(),
@@ -133,14 +133,21 @@ export class FriendsService {
 
     await this.audit.record({
       actorId: userId,
-      action: friendship.status === FriendshipStatus.ACCEPTED ? 'FRIEND_AUTO_ACCEPTED' : 'FRIEND_REQUEST_SENT',
+      action:
+        friendship.status === FriendshipStatus.ACCEPTED
+          ? 'FRIEND_AUTO_ACCEPTED'
+          : 'FRIEND_REQUEST_SENT',
       entityType: 'Friendship',
       entityId: friendship.id,
     });
     return friendship;
   }
 
-  async respond(userId: string, friendshipId: string, accept: boolean): Promise<Record<string, unknown>> {
+  async respond(
+    userId: string,
+    friendshipId: string,
+    accept: boolean,
+  ): Promise<Record<string, unknown>> {
     const friendship = await this.prisma.friendship.findFirst({
       where: {
         id: friendshipId,

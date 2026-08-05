@@ -14,7 +14,12 @@ import {
   Inter_700Bold,
   useFonts,
 } from '@expo-google-fonts/inter';
-import { focusManager, onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import {
+  focusManager,
+  onlineManager,
+  QueryClient,
+  QueryClientProvider,
+} from '@tanstack/react-query';
 import Animated, { FadeIn, FadeOut, ZoomIn } from 'react-native-reanimated';
 import atlasIcon from '../../assets/icon.png';
 import { AtlasText } from '@/components/ui/AtlasText';
@@ -34,7 +39,9 @@ const queryClient = new QueryClient({
 });
 
 onlineManager.setEventListener((setOnline) => {
-  const subscription = Network.addNetworkStateListener((state) => setOnline(Boolean(state.isConnected)));
+  const subscription = Network.addNetworkStateListener((state) =>
+    setOnline(Boolean(state.isConnected)),
+  );
   return () => subscription.remove();
 });
 
@@ -69,13 +76,20 @@ function AtlasApp() {
   if (!ready) {
     return (
       <Animated.View exiting={FadeOut.duration(350)} style={styles.splash}>
-        <LinearGradient colors={['#020617', '#0B1B3D', '#0B2E40']} style={StyleSheet.absoluteFill} />
+        <LinearGradient
+          colors={['#020617', '#0B1B3D', '#0B2E40']}
+          style={StyleSheet.absoluteFill}
+        />
         <Animated.View entering={ZoomIn.springify().damping(15)} style={styles.splashLogoWrap}>
           <Image source={atlasIcon} style={styles.splashLogo} />
         </Animated.View>
         <Animated.View entering={FadeIn.delay(350).duration(500)} style={styles.splashCopy}>
-          <AtlasText variant="h1" color={palette.white}>Atlas AI</AtlasText>
-          <AtlasText variant="caption" color="#94A3B8">KNOW WHERE YOUR PEOPLE ARE</AtlasText>
+          <AtlasText variant="h1" color={palette.white}>
+            Atlas AI
+          </AtlasText>
+          <AtlasText variant="caption" color="#94A3B8">
+            KNOW WHERE YOUR PEOPLE ARE
+          </AtlasText>
         </Animated.View>
       </Animated.View>
     );

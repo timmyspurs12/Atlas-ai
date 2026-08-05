@@ -1,9 +1,5 @@
 import { createHash, randomBytes, randomInt, randomUUID } from 'node:crypto';
-import {
-  ConflictException,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
@@ -144,23 +140,29 @@ export class AuthService {
 
   async socialLogin(input: SocialLoginDto, metadata: RequestMetadata): Promise<AuthSession> {
     const identity = await this.socialTokens.verify(input.provider, input.idToken);
-    const provider = input.provider === SocialProviderDto.GOOGLE ? AuthProvider.GOOGLE : AuthProvider.APPLE;
+    const provider =
+      input.provider === SocialProviderDto.GOOGLE ? AuthProvider.GOOGLE : AuthProvider.APPLE;
 
     const result = await this.prisma.$transaction(async (transaction) => {
       const existingIdentity = await transaction.authIdentity.findUnique({
         where: { provider_providerSubject: { provider, providerSubject: identity.subject } },
         include: { user: { include: { profile: true } } },
       });
-      if (existingIdentity?.user.deletedAt) throw new UnauthorizedException('Account is unavailable');
+      if (existingIdentity?.user.deletedAt)
+        throw new UnauthorizedException('Account is unavailable');
 
       let user: UserWithProfile;
       if (existingIdentity) {
         user = existingIdentity.user;
       } else {
         const existingByEmail = identity.email
-          ? await transaction.user.findFirst({ where: { email: identity.email, deletedAt: null }, include: { profile: true } })
+          ? await transaction.user.findFirst({
+              where: { email: identity.email, deletedAt: null },
+              include: { profile: true },
+            })
           : null;
-        user = existingByEmail ??
+        user =
+          existingByEmail ??
           (await transaction.user.create({
             data: {
               email: identity.email,
@@ -173,7 +175,11 @@ export class AuthService {
                 },
               },
               subscriptions: {
-                create: { plan: SubscriptionPlan.FREE, status: SubscriptionStatus.ACTIVE, entitlements: {} },
+                create: {
+                  plan: SubscriptionPlan.FREE,
+                  status: SubscriptionStatus.ACTIVE,
+                  entitlements: {},
+                },
               },
             },
             include: { profile: true },
@@ -188,7 +194,8 @@ export class AuthService {
         });
       }
 
-      if (user.status !== UserStatus.ACTIVE) throw new UnauthorizedException('Account is unavailable');
+      if (user.status !== UserStatus.ACTIVE)
+        throw new UnauthorizedException('Account is unavailable');
       const session = await this.createSession(user.id, input.device, metadata, transaction);
       return { user, session };
     });
@@ -382,7 +389,9 @@ export class AuthService {
   }
 
   async requestPasswordReset(input: ForgotPasswordDto): Promise<{ accepted: true }> {
-    const user = await this.prisma.user.findFirst({ where: { email: input.email, deletedAt: null } });
+    const user = await this.prisma.user.findFirst({
+      where: { email: input.email, deletedAt: null },
+    });
     if (!user) return { accepted: true };
 
     const challengeId = randomUUID();
@@ -420,10 +429,17 @@ export class AuthService {
     const passwordHash = await argon2.hash(input.password, this.passwordOptions);
     await this.prisma.$transaction([
       this.prisma.user.update({ where: { id: challenge.userId }, data: { passwordHash } }),
-      this.prisma.verificationChallenge.update({ where: { id: challenge.id }, data: { consumedAt: new Date() } }),
+      this.prisma.verificationChallenge.update({
+        where: { id: challenge.id },
+        data: { consumedAt: new Date() },
+      }),
       this.prisma.session.updateMany({
         where: { userId: challenge.userId, status: SessionStatus.ACTIVE },
-        data: { status: SessionStatus.REVOKED, revokedAt: new Date(), revokeReason: 'PASSWORD_RESET' },
+        data: {
+          status: SessionStatus.REVOKED,
+          revokedAt: new Date(),
+          revokeReason: 'PASSWORD_RESET',
+        },
       }),
     ]);
     await this.audit.record({
@@ -479,7 +495,10 @@ export class AuthService {
     return { id: sessionId, refreshToken: refresh.serialized, deviceId: device.id };
   }
 
-  private async issueAuthSession(user: UserWithProfile, session: CreatedSession): Promise<AuthSession> {
+  private async issueAuthSession(
+    user: UserWithProfile,
+    session: CreatedSession,
+  ): Promise<AuthSession> {
     if (!user.profile) throw new Error('User profile invariant violated');
     const expiresIn = this.config.get('ACCESS_TOKEN_TTL_SECONDS', { infer: true });
     const accessToken = await this.jwt.signAsync(

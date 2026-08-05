@@ -58,7 +58,8 @@ export class AiService {
           role: AiRole.ASSISTANT,
           content: result.answer,
           intent: parsed.intent,
-          model: result.generatedBy === 'AI' ? this.config.get('OPENAI_MODEL', { infer: true }) : null,
+          model:
+            result.generatedBy === 'AI' ? this.config.get('OPENAI_MODEL', { infer: true }) : null,
           preciseLocationShared: input.preciseLocationConsent && result.generatedBy === 'AI',
         },
       }),
@@ -119,7 +120,10 @@ export class AiService {
         `${share.owner.profile?.displayName ?? personName} is sharing, but no location update is available yet.`,
       );
     }
-    const ageMinutes = Math.max(0, Math.round((Date.now() - location.recordedAt.getTime()) / 60_000));
+    const ageMinutes = Math.max(
+      0,
+      Math.round((Date.now() - location.recordedAt.getTime()) / 60_000),
+    );
     const stale = ageMinutes >= 2;
     let answer = `${share.owner.profile?.displayName ?? personName}’s location was updated ${ageMinutes === 0 ? 'just now' : `${ageMinutes} minute${ageMinutes === 1 ? '' : 's'} ago`}${stale ? ' and may be stale' : ''}.`;
     if (includeEta) {
@@ -142,15 +146,21 @@ export class AiService {
       action: { type: 'OPEN_PERSON', userId: share.ownerId },
       generatedBy: 'DETERMINISTIC',
       dataAsOf: location.recordedAt,
-      safetyNotice: includeEta ? 'ETA is an estimate and can change with traffic or signal quality.' : null,
+      safetyNotice: includeEta
+        ? 'ETA is an estimate and can change with traffic or signal quality.'
+        : null,
     };
   }
 
   private async closestPerson(userId: string): Promise<AssistantResult> {
     const own = await this.prisma.liveLocation.findUnique({ where: { userId } });
-    if (!own) return this.simple('Turn on your location to compare distances to people sharing with you.');
-    const people = (await this.authorizedPeople(userId)).filter((share) => share.owner.liveLocation);
-    if (people.length === 0) return this.simple('No trusted contacts are actively sharing a location with you.');
+    if (!own)
+      return this.simple('Turn on your location to compare distances to people sharing with you.');
+    const people = (await this.authorizedPeople(userId)).filter(
+      (share) => share.owner.liveLocation,
+    );
+    if (people.length === 0)
+      return this.simple('No trusted contacts are actively sharing a location with you.');
     const ranked = people
       .map((share) => ({
         share,
@@ -235,11 +245,19 @@ export class AiService {
     const trips = await this.prisma.trip.findMany({
       where: { userId, startedAt: { gte: since }, deletedAt: null },
     });
-    if (trips.length < 3) return this.simple('Record a few more trips before I analyse travel patterns.');
+    if (trips.length < 3)
+      return this.simple('Record a few more trips before I analyse travel patterns.');
     const byDay = new Map<number, number>();
-    trips.forEach((trip) => byDay.set(trip.startedAt.getUTCDay(), (byDay.get(trip.startedAt.getUTCDay()) ?? 0) + trip.distanceM));
+    trips.forEach((trip) =>
+      byDay.set(
+        trip.startedAt.getUTCDay(),
+        (byDay.get(trip.startedAt.getUTCDay()) ?? 0) + trip.distanceM,
+      ),
+    );
     const [day, distance] = [...byDay.entries()].sort((a, b) => b[1] - a[1])[0] ?? [0, 0];
-    const dayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][day];
+    const dayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][
+      day
+    ];
     return {
       answer: `${dayName}s have been your highest-travel days over the last four weeks, totalling ${(distance / 1_000).toFixed(1)} km. This is descriptive, not a prediction.`,
       action: { type: 'OPEN_REPORT', period: 'MONTH' },
@@ -254,7 +272,10 @@ export class AiService {
     const trips = await this.prisma.trip.findMany({
       where: { userId, startedAt: { gte: since }, deletedAt: null },
     });
-    if (trips.length < 8) return this.simple('There isn’t enough trip history for a reliable unusual-travel check yet.');
+    if (trips.length < 8)
+      return this.simple(
+        'There isn’t enough trip history for a reliable unusual-travel check yet.',
+      );
     const weekTotals = new Map<string, number>();
     trips.forEach((trip) => {
       const start = new Date(trip.startedAt);
@@ -278,7 +299,10 @@ export class AiService {
     };
   }
 
-  private async generateGeneralAnswer(userId: string, input: AskAssistantDto): Promise<AssistantResult> {
+  private async generateGeneralAnswer(
+    userId: string,
+    input: AskAssistantDto,
+  ): Promise<AssistantResult> {
     if (!this.openai) {
       return this.simple(
         'I can help with live-location status, ETA, closest contacts, trip replay, distance totals, weekly reports, and travel patterns. Try “How far did I travel this week?”',
@@ -292,7 +316,12 @@ export class AiService {
         _count: true,
       }),
       this.prisma.locationShare.count({
-        where: { recipientId: userId, status: LocationShareStatus.ACTIVE, expiresAt: { gt: new Date() }, deletedAt: null },
+        where: {
+          recipientId: userId,
+          status: LocationShareStatus.ACTIVE,
+          expiresAt: { gt: new Date() },
+          deletedAt: null,
+        },
       }),
     ]);
     const context = {

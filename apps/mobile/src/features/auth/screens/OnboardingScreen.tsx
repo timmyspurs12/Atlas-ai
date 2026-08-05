@@ -83,8 +83,16 @@ export function OnboardingScreen({ navigation }: Props) {
               </AtlasText>
             </View>
           </View>
-          <Button label="Create your account" icon={ArrowRight} onPress={() => navigation.navigate('Register')} />
-          <Button label="I already have an account" variant="secondary" onPress={() => navigation.navigate('Login')} />
+          <Button
+            label="Create your account"
+            icon={ArrowRight}
+            onPress={() => navigation.navigate('Register')}
+          />
+          <Button
+            label="I already have an account"
+            variant="secondary"
+            onPress={() => navigation.navigate('Login')}
+          />
           {runtime.demoMode ? (
             <Pressable
               accessibilityRole="button"

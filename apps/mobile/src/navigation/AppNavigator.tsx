@@ -102,17 +102,45 @@ export function AppNavigator() {
         {signedIn ? (
           <>
             <Stack.Screen name="Main" component={MainTabs} />
-            <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ animation: 'slide_from_right' }} />
-            <Stack.Screen name="Chat" component={ChatScreen} options={{ animation: 'slide_from_right' }} />
-            <Stack.Screen name="Geofences" component={GeofencesScreen} options={{ animation: 'slide_from_right' }} />
-            <Stack.Screen name="Safety" component={SafetyScreen} options={{ presentation: 'modal' }} />
+            <Stack.Screen
+              name="Notifications"
+              component={NotificationsScreen}
+              options={{ animation: 'slide_from_right' }}
+            />
+            <Stack.Screen
+              name="Chat"
+              component={ChatScreen}
+              options={{ animation: 'slide_from_right' }}
+            />
+            <Stack.Screen
+              name="Geofences"
+              component={GeofencesScreen}
+              options={{ animation: 'slide_from_right' }}
+            />
+            <Stack.Screen
+              name="Safety"
+              component={SafetyScreen}
+              options={{ presentation: 'modal' }}
+            />
           </>
         ) : (
           <>
             <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-            <Stack.Screen name="Login" component={LoginScreen} options={{ animation: 'slide_from_right' }} />
-            <Stack.Screen name="Register" component={RegisterScreen} options={{ animation: 'slide_from_right' }} />
-            <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} options={{ animation: 'slide_from_right' }} />
+            <Stack.Screen
+              name="Login"
+              component={LoginScreen}
+              options={{ animation: 'slide_from_right' }}
+            />
+            <Stack.Screen
+              name="Register"
+              component={RegisterScreen}
+              options={{ animation: 'slide_from_right' }}
+            />
+            <Stack.Screen
+              name="ForgotPassword"
+              component={ForgotPasswordScreen}
+              options={{ animation: 'slide_from_right' }}
+            />
           </>
         )}
       </Stack.Navigator>

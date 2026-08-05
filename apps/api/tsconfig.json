@@ -14,6 +14,13 @@
     "target": "ES2023",
     "types": ["node"]
   },
-  "include": ["src/**/*.ts", "test/**/*.ts", "*.config.ts", "*.config.mts", "prisma.config.ts", "prisma/seed.ts"],
+  "include": [
+    "src/**/*.ts",
+    "test/**/*.ts",
+    "*.config.ts",
+    "*.config.mts",
+    "prisma.config.ts",
+    "prisma/seed.ts"
+  ],
   "exclude": ["node_modules", "dist", "src/generated"]
 }

@@ -34,13 +34,21 @@ export function LoginScreen({ navigation }: Props) {
     resolver: zodResolver(schema),
     defaultValues: { email: '', password: '' },
   });
-  useEffect(() => () => {
-    dispatch(clearAuthError());
-  }, [dispatch]);
+  useEffect(
+    () => () => {
+      dispatch(clearAuthError());
+    },
+    [dispatch],
+  );
 
   return (
     <Screen contentStyle={styles.content}>
-      <IconButton icon={ArrowLeft} label="Back" onPress={() => navigation.goBack()} style={styles.back} />
+      <IconButton
+        icon={ArrowLeft}
+        label="Back"
+        onPress={() => navigation.goBack()}
+        style={styles.back}
+      />
       <View style={styles.heading}>
         <View style={styles.eyebrow}>
           <LockKeyhole size={14} color={palette.teal} />

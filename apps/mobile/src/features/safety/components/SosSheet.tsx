@@ -44,8 +44,11 @@ export function SosSheet({ visible, onClose }: SosSheetProps) {
         await new Promise((resolve) => setTimeout(resolve, 700));
       } else {
         const permission = await Location.requestForegroundPermissionsAsync();
-        if (!permission.granted) throw new Error('Location permission is needed to send an SOS location.');
-        const current = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+        if (!permission.granted)
+          throw new Error('Location permission is needed to send an SOS location.');
+        const current = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.High,
+        });
         await apiRequest('/safety/sos', {
           method: 'POST',
           body: {
@@ -96,20 +99,29 @@ export function SosSheet({ visible, onClose }: SosSheetProps) {
         <Pressable style={StyleSheet.absoluteFill} onPress={close} />
         <View style={[styles.sheet, shadow, { backgroundColor: theme.colors.surface }]}>
           <View style={styles.header}>
-            <View style={styles.alertIcon}><ShieldAlert size={25} color={palette.red} /></View>
+            <View style={styles.alertIcon}>
+              <ShieldAlert size={25} color={palette.red} />
+            </View>
             <View style={styles.headerCopy}>
               <AtlasText variant="h2">Emergency SOS</AtlasText>
-              <AtlasText variant="caption" color={theme.colors.textMuted}>Deliberate hold prevents accidental alerts.</AtlasText>
+              <AtlasText variant="caption" color={theme.colors.textMuted}>
+                Deliberate hold prevents accidental alerts.
+              </AtlasText>
             </View>
             <IconButton icon={X} label="Close SOS" onPress={close} size={40} />
           </View>
 
           {status === 'sent' ? (
             <View style={styles.sentContent}>
-              <View style={styles.sentIcon}><Check size={34} color={palette.white} strokeWidth={3} /></View>
-              <AtlasText variant="h2" align="center">Your SOS was sent</AtlasText>
+              <View style={styles.sentIcon}>
+                <Check size={34} color={palette.white} strokeWidth={3} />
+              </View>
+              <AtlasText variant="h2" align="center">
+                Your SOS was sent
+              </AtlasText>
               <AtlasText align="center" color={theme.colors.textMuted}>
-                Verified emergency contacts received your safety alert and time-limited location link.
+                Verified emergency contacts received your safety alert and time-limited location
+                link.
               </AtlasText>
               <Button label="I’m safe — close alert" onPress={close} />
             </View>
@@ -117,9 +129,15 @@ export function SosSheet({ visible, onClose }: SosSheetProps) {
             <>
               <View style={[styles.notice, { backgroundColor: theme.colors.background }]}>
                 <AtlasText variant="label">This will immediately:</AtlasText>
-                <AtlasText variant="caption" color={theme.colors.textMuted}>• Notify your verified emergency contacts</AtlasText>
-                <AtlasText variant="caption" color={theme.colors.textMuted}>• Share a 24-hour safety link with your current location</AtlasText>
-                <AtlasText variant="caption" color={theme.colors.textMuted}>• Send push, SMS, or email based on your settings</AtlasText>
+                <AtlasText variant="caption" color={theme.colors.textMuted}>
+                  • Notify your verified emergency contacts
+                </AtlasText>
+                <AtlasText variant="caption" color={theme.colors.textMuted}>
+                  • Share a 24-hour safety link with your current location
+                </AtlasText>
+                <AtlasText variant="caption" color={theme.colors.textMuted}>
+                  • Send push, SMS, or email based on your settings
+                </AtlasText>
               </View>
               <GestureDetector gesture={hold}>
                 <Animated.View
@@ -131,15 +149,26 @@ export function SosSheet({ visible, onClose }: SosSheetProps) {
                   <Animated.View style={[styles.progress, progressStyle]} />
                   <ShieldAlert color={palette.white} size={26} />
                   <View>
-                    <AtlasText variant="h3" color={palette.white}>Hold for 3 seconds</AtlasText>
-                    <AtlasText variant="caption" color="#FECACA">Release to cancel</AtlasText>
+                    <AtlasText variant="h3" color={palette.white}>
+                      Hold for 3 seconds
+                    </AtlasText>
+                    <AtlasText variant="caption" color="#FECACA">
+                      Release to cancel
+                    </AtlasText>
                   </View>
                 </Animated.View>
               </GestureDetector>
-              {status === 'sending' ? <AtlasText align="center">Sending encrypted alert…</AtlasText> : null}
-              {error ? <AtlasText variant="caption" color={palette.red} align="center">{error}</AtlasText> : null}
+              {status === 'sending' ? (
+                <AtlasText align="center">Sending encrypted alert…</AtlasText>
+              ) : null}
+              {error ? (
+                <AtlasText variant="caption" color={palette.red} align="center">
+                  {error}
+                </AtlasText>
+              ) : null}
               <AtlasText variant="caption" color={theme.colors.textMuted} align="center">
-                Atlas AI does not replace emergency services. If danger is immediate, contact your local emergency number.
+                Atlas AI does not replace emergency services. If danger is immediate, contact your
+                local emergency number.
               </AtlasText>
             </>
           )}
@@ -150,14 +179,57 @@ export function SosSheet({ visible, onClose }: SosSheetProps) {
 }
 
 const styles = StyleSheet.create({
-  backdrop: { alignItems: 'center', backgroundColor: 'rgba(2,6,23,0.7)', flex: 1, justifyContent: 'center', padding: spacing.lg },
-  sheet: { borderRadius: radii.xl, gap: spacing.lg, maxWidth: 440, padding: spacing.lg, width: '100%' },
+  backdrop: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(2,6,23,0.7)',
+    flex: 1,
+    justifyContent: 'center',
+    padding: spacing.lg,
+  },
+  sheet: {
+    borderRadius: radii.xl,
+    gap: spacing.lg,
+    maxWidth: 440,
+    padding: spacing.lg,
+    width: '100%',
+  },
   header: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
-  alertIcon: { alignItems: 'center', backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: 15, height: 46, justifyContent: 'center', width: 46 },
+  alertIcon: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(239,68,68,0.1)',
+    borderRadius: 15,
+    height: 46,
+    justifyContent: 'center',
+    width: 46,
+  },
   headerCopy: { flex: 1 },
   notice: { borderRadius: radii.md, gap: spacing.xs, padding: spacing.md },
-  holdButton: { alignItems: 'center', backgroundColor: palette.red, borderRadius: radii.lg, flexDirection: 'row', gap: spacing.md, minHeight: 78, overflow: 'hidden', paddingHorizontal: spacing.lg },
-  progress: { backgroundColor: 'rgba(127,29,29,0.55)', bottom: 0, left: 0, position: 'absolute', top: 0, transformOrigin: 'left', width: '100%' },
+  holdButton: {
+    alignItems: 'center',
+    backgroundColor: palette.red,
+    borderRadius: radii.lg,
+    flexDirection: 'row',
+    gap: spacing.md,
+    minHeight: 78,
+    overflow: 'hidden',
+    paddingHorizontal: spacing.lg,
+  },
+  progress: {
+    backgroundColor: 'rgba(127,29,29,0.55)',
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
+    top: 0,
+    transformOrigin: 'left',
+    width: '100%',
+  },
   sentContent: { alignItems: 'center', gap: spacing.md, paddingTop: spacing.sm },
-  sentIcon: { alignItems: 'center', backgroundColor: palette.green, borderRadius: 34, height: 68, justifyContent: 'center', width: 68 },
+  sentIcon: {
+    alignItems: 'center',
+    backgroundColor: palette.green,
+    borderRadius: 34,
+    height: 68,
+    justifyContent: 'center',
+    width: 68,
+  },
 });

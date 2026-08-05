@@ -67,7 +67,11 @@ export class GeofencesService {
     });
   }
 
-  async update(ownerId: string, geofenceId: string, input: UpdateGeofenceDto): Promise<Record<string, unknown>> {
+  async update(
+    ownerId: string,
+    geofenceId: string,
+    input: UpdateGeofenceDto,
+  ): Promise<Record<string, unknown>> {
     const geofence = await this.prisma.geofence.findFirst({
       where: { id: geofenceId, ownerId, deletedAt: null },
     });

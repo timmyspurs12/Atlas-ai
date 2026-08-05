@@ -15,7 +15,11 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
       idleTimeoutMillis: 30_000,
       max: 20,
     });
-    super({ adapter, log: config.get('NODE_ENV', { infer: true }) === 'development' ? ['warn', 'error'] : ['error'] });
+    super({
+      adapter,
+      log:
+        config.get('NODE_ENV', { infer: true }) === 'development' ? ['warn', 'error'] : ['error'],
+    });
   }
 
   async onModuleInit(): Promise<void> {

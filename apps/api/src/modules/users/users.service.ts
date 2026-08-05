@@ -15,7 +15,10 @@ export class UsersService {
   async me(userId: string): Promise<Record<string, unknown>> {
     const user = await this.prisma.user.findFirst({
       where: { id: userId, deletedAt: null },
-      include: { profile: true, subscriptions: { where: { deletedAt: null }, orderBy: { createdAt: 'desc' }, take: 1 } },
+      include: {
+        profile: true,
+        subscriptions: { where: { deletedAt: null }, orderBy: { createdAt: 'desc' }, take: 1 },
+      },
     });
     if (!user?.profile) throw new NotFoundException('Profile not found');
     return {
@@ -50,7 +53,12 @@ export class UsersService {
       });
       return profile;
     } catch (error) {
-      if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2002') {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        error.code === 'P2002'
+      ) {
         throw new ConflictException('That handle is already taken');
       }
       throw error;
@@ -92,16 +100,38 @@ export class UsersService {
   async exportData(userId: string): Promise<Record<string, unknown>> {
     const [user, friendships, shares, trips, messages, geofences, notifications, auditLogs] =
       await this.prisma.$transaction([
-        this.prisma.user.findUnique({ where: { id: userId }, include: { profile: true, devices: true, subscriptions: true } }),
-        this.prisma.friendship.findMany({ where: { OR: [{ requesterId: userId }, { addresseeId: userId }] } }),
-        this.prisma.locationShare.findMany({ where: { OR: [{ ownerId: userId }, { recipientId: userId }] } }),
+        this.prisma.user.findUnique({
+          where: { id: userId },
+          include: { profile: true, devices: true, subscriptions: true },
+        }),
+        this.prisma.friendship.findMany({
+          where: { OR: [{ requesterId: userId }, { addresseeId: userId }] },
+        }),
+        this.prisma.locationShare.findMany({
+          where: { OR: [{ ownerId: userId }, { recipientId: userId }] },
+        }),
         this.prisma.trip.findMany({ where: { userId }, include: { points: true } }),
-        this.prisma.message.findMany({ where: { senderId: userId }, select: { id: true, conversationId: true, type: true, sentAt: true, editedAt: true, createdAt: true } }),
+        this.prisma.message.findMany({
+          where: { senderId: userId },
+          select: {
+            id: true,
+            conversationId: true,
+            type: true,
+            sentAt: true,
+            editedAt: true,
+            createdAt: true,
+          },
+        }),
         this.prisma.geofence.findMany({ where: { ownerId: userId } }),
         this.prisma.notification.findMany({ where: { userId } }),
         this.prisma.auditLog.findMany({ where: { actorId: userId } }),
       ]);
-    await this.audit.record({ actorId: userId, action: 'DATA_EXPORTED', entityType: 'User', entityId: userId });
+    await this.audit.record({
+      actorId: userId,
+      action: 'DATA_EXPORTED',
+      entityType: 'User',
+      entityId: userId,
+    });
     return {
       format: 'atlas-portability-v1',
       exportedAt: new Date().toISOString(),
@@ -125,7 +155,11 @@ export class UsersService {
       }),
       this.prisma.session.updateMany({
         where: { userId: principal.userId, status: SessionStatus.ACTIVE },
-        data: { status: SessionStatus.REVOKED, revokedAt: new Date(), revokeReason: 'ACCOUNT_DELETION' },
+        data: {
+          status: SessionStatus.REVOKED,
+          revokedAt: new Date(),
+          revokeReason: 'ACCOUNT_DELETION',
+        },
       }),
       this.prisma.locationShare.updateMany({
         where: {

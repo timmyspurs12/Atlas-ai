@@ -27,7 +27,10 @@ export function parseAssistantIntent(question: string): ParsedIntent {
   const where = /(?:where (?:is|are)|locate|find)\s+([\p{L}\p{N} .'-]+)/iu.exec(normalized);
   if (where) return { intent: AssistantIntent.WHERE_PERSON, personName: cleanName(where[1]) };
 
-  const eta = /(?:when will|eta (?:for|of)?|how long (?:until|before))\s+([\p{L}\p{N} .'-]+?)(?:\s+(?:arrive|gets? here|reach)|[?.!]|$)/iu.exec(normalized);
+  const eta =
+    /(?:when will|eta (?:for|of)?|how long (?:until|before))\s+([\p{L}\p{N} .'-]+?)(?:\s+(?:arrive|gets? here|reach)|[?.!]|$)/iu.exec(
+      normalized,
+    );
   if (eta) return { intent: AssistantIntent.ETA_PERSON, personName: cleanName(eta[1]) };
 
   if (/\b(replay|show)\b.*\b(yesterday|journey|trip|route)\b/i.test(normalized)) {
@@ -36,7 +39,9 @@ export function parseAssistantIntent(question: string): ParsedIntent {
   if (/\bwho\b.*\bclosest\b|\bnearest (?:person|friend)\b/i.test(normalized)) {
     return { intent: AssistantIntent.CLOSEST_PERSON, personName: null };
   }
-  if (/\b(how (?:many|far)|distance)\b.*\b(km|kilomet|travel|week|month|today)\b/i.test(normalized)) {
+  if (
+    /\b(how (?:many|far)|distance)\b.*\b(km|kilomet|travel|week|month|today)\b/i.test(normalized)
+  ) {
     return { intent: AssistantIntent.DISTANCE_TRAVELLED, personName: null };
   }
   if (/\b(weekly|week)\b.*\b(report|summary|recap)\b/i.test(normalized)) {

@@ -36,7 +36,10 @@ export class TripsService {
       data: {
         status: TripStatus.COMPLETED,
         endedAt,
-        durationSeconds: Math.max(0, Math.round((endedAt.getTime() - trip.startedAt.getTime()) / 1000)),
+        durationSeconds: Math.max(
+          0,
+          Math.round((endedAt.getTime() - trip.startedAt.getTime()) / 1000),
+        ),
       },
     });
   }
@@ -116,7 +119,9 @@ export class TripsService {
   async detail(userId: string, tripId: string): Promise<Record<string, unknown>> {
     const trip = await this.prisma.trip.findFirst({
       where: { id: tripId, userId, deletedAt: null },
-      include: { points: { where: { deletedAt: null }, orderBy: { sequence: 'asc' }, take: 5_000 } },
+      include: {
+        points: { where: { deletedAt: null }, orderBy: { sequence: 'asc' }, take: 5_000 },
+      },
     });
     if (!trip) throw new NotFoundException('Trip not found');
     return {

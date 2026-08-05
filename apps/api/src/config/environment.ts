@@ -38,7 +38,11 @@ const environmentSchema = z
     if (env.NODE_ENV !== 'production') return;
 
     const unsafeValues = ['replace-with', 'atlas_dev_only', 'development-only'];
-    for (const key of ['JWT_ACCESS_SECRET', 'REFRESH_TOKEN_PEPPER', 'FIELD_ENCRYPTION_KEY'] as const) {
+    for (const key of [
+      'JWT_ACCESS_SECRET',
+      'REFRESH_TOKEN_PEPPER',
+      'FIELD_ENCRYPTION_KEY',
+    ] as const) {
       if (unsafeValues.some((value) => env[key].includes(value))) {
         context.addIssue({
           code: 'custom',

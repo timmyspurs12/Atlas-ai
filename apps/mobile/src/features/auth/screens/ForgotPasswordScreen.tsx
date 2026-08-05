@@ -23,7 +23,11 @@ export function ForgotPasswordScreen({ navigation }: Props) {
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
-  const { control, handleSubmit, formState: { errors } } = useForm<FormData>({
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { email: '' },
   });
@@ -32,7 +36,11 @@ export function ForgotPasswordScreen({ navigation }: Props) {
     setLoading(true);
     setRequestError(null);
     try {
-      await apiRequest('/auth/forgot-password', { method: 'POST', authenticated: false, body: input });
+      await apiRequest('/auth/forgot-password', {
+        method: 'POST',
+        authenticated: false,
+        body: input,
+      });
       setSent(true);
     } catch (error) {
       setRequestError(error instanceof AtlasApiError ? error.message : 'Please try again.');
@@ -43,7 +51,12 @@ export function ForgotPasswordScreen({ navigation }: Props) {
 
   return (
     <Screen contentStyle={styles.content}>
-      <IconButton icon={ArrowLeft} label="Back" onPress={() => navigation.goBack()} style={styles.back} />
+      <IconButton
+        icon={ArrowLeft}
+        label="Back"
+        onPress={() => navigation.goBack()}
+        style={styles.back}
+      />
       <View style={styles.heading}>
         <AtlasText variant="h1">Reset your password</AtlasText>
         <AtlasText color={palette.slate500}>
@@ -81,7 +94,11 @@ export function ForgotPasswordScreen({ navigation }: Props) {
             )}
           />
           {requestError ? <AtlasText color={palette.red}>{requestError}</AtlasText> : null}
-          <Button label="Send reset link" loading={loading} onPress={() => void handleSubmit(submit)()} />
+          <Button
+            label="Send reset link"
+            loading={loading}
+            onPress={() => void handleSubmit(submit)()}
+          />
         </View>
       )}
     </Screen>
@@ -93,7 +110,12 @@ const styles = StyleSheet.create({
   back: { alignSelf: 'flex-start' },
   heading: { gap: spacing.xs, marginTop: spacing.xxxl },
   form: { gap: spacing.lg, marginTop: spacing.xxl },
-  confirmation: { alignItems: 'center', gap: spacing.md, marginTop: spacing.xxl, padding: spacing.xl },
+  confirmation: {
+    alignItems: 'center',
+    gap: spacing.md,
+    marginTop: spacing.xxl,
+    padding: spacing.xl,
+  },
   confirmIcon: {
     alignItems: 'center',
     backgroundColor: 'rgba(20,184,166,0.12)',

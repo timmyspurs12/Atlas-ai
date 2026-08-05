@@ -117,14 +117,33 @@ export function HomeScreen() {
       />
       <SafeAreaView style={styles.overlay} edges={['top']} pointerEvents="box-none">
         <View style={styles.topRow} pointerEvents="box-none">
-          <View style={[styles.greeting, shadow, { backgroundColor: theme.colors.mapOverlay, borderColor: theme.colors.border }]}>
-            <Avatar name={session?.user.displayName ?? 'Atlas user'} color={palette.blue} size={38} online />
+          <View
+            style={[
+              styles.greeting,
+              shadow,
+              { backgroundColor: theme.colors.mapOverlay, borderColor: theme.colors.border },
+            ]}
+          >
+            <Avatar
+              name={session?.user.displayName ?? 'Atlas user'}
+              color={palette.blue}
+              size={38}
+              online
+            />
             <View>
-              <AtlasText variant="micro" color={theme.colors.textMuted}>GOOD AFTERNOON</AtlasText>
-              <AtlasText variant="label">{session?.user.displayName.split(' ')[0] ?? 'Welcome'}</AtlasText>
+              <AtlasText variant="micro" color={theme.colors.textMuted}>
+                GOOD AFTERNOON
+              </AtlasText>
+              <AtlasText variant="label">
+                {session?.user.displayName.split(' ')[0] ?? 'Welcome'}
+              </AtlasText>
             </View>
           </View>
-          <IconButton icon={Bell} label="Notifications" onPress={() => navigation.navigate('Notifications')} />
+          <IconButton
+            icon={Bell}
+            label="Notifications"
+            onPress={() => navigation.navigate('Notifications')}
+          />
         </View>
 
         <View style={styles.statusRow}>
@@ -137,13 +156,21 @@ export function HomeScreen() {
             >
               <View style={styles.liveDot} />
               <View>
-                <AtlasText variant="micro" color={palette.green}>SHARING LIVE</AtlasText>
+                <AtlasText variant="micro" color={palette.green}>
+                  SHARING LIVE
+                </AtlasText>
                 <AtlasText variant="caption">Until {expiresLabel}</AtlasText>
               </View>
               <Square size={14} fill={palette.red} color={palette.red} />
             </Pressable>
           ) : (
-            <Pill label="Location private" dot color={palette.slate500} backgroundColor={theme.colors.mapOverlay} style={shadow} />
+            <Pill
+              label="Location private"
+              dot
+              color={palette.slate500}
+              backgroundColor={theme.colors.mapOverlay}
+              style={shadow}
+            />
           )}
         </View>
 
@@ -160,22 +187,42 @@ export function HomeScreen() {
           style={({ pressed }) => [styles.sosFab, shadow, { opacity: pressed ? 0.82 : 1 }]}
         >
           <ShieldAlert size={23} color={palette.white} />
-          <AtlasText variant="micro" color={palette.white}>SOS</AtlasText>
+          <AtlasText variant="micro" color={palette.white}>
+            SOS
+          </AtlasText>
         </Pressable>
 
         <View style={styles.bottomArea} pointerEvents="box-none">
           {selected ? (
-            <View style={[styles.personCard, shadow, { backgroundColor: theme.colors.mapOverlay, borderColor: theme.colors.border }]}>
+            <View
+              style={[
+                styles.personCard,
+                shadow,
+                { backgroundColor: theme.colors.mapOverlay, borderColor: theme.colors.border },
+              ]}
+            >
               <View style={styles.personTop}>
-                <Avatar name={selected.name} color={selected.color} size={50} online={selected.status !== 'stale'} />
+                <Avatar
+                  name={selected.name}
+                  color={selected.color}
+                  size={50}
+                  online={selected.status !== 'stale'}
+                />
                 <View style={styles.personCopy}>
                   <View style={styles.nameRow}>
                     <AtlasText variant="h3">{selected.name}</AtlasText>
                     {selected.status === 'moving' ? (
-                      <Pill label="LIVE" dot color={palette.green} backgroundColor="rgba(34,197,94,0.12)" />
+                      <Pill
+                        label="LIVE"
+                        dot
+                        color={palette.green}
+                        backgroundColor="rgba(34,197,94,0.12)"
+                      />
                     ) : null}
                   </View>
-                  <AtlasText variant="caption" color={theme.colors.textMuted}>{selected.statusLabel}</AtlasText>
+                  <AtlasText variant="caption" color={theme.colors.textMuted}>
+                    {selected.statusLabel}
+                  </AtlasText>
                 </View>
                 <IconButton
                   icon={MessageCircle}
@@ -185,14 +232,22 @@ export function HomeScreen() {
                 />
               </View>
               <View style={[styles.placeRow, { borderColor: theme.colors.border }]}>
-                <View style={styles.placeIcon}><Navigation2 size={15} color={palette.blue} /></View>
+                <View style={styles.placeIcon}>
+                  <Navigation2 size={15} color={palette.blue} />
+                </View>
                 <View style={styles.placeCopy}>
-                  <AtlasText variant="caption" color={theme.colors.textMuted}>LAST KNOWN AREA</AtlasText>
+                  <AtlasText variant="caption" color={theme.colors.textMuted}>
+                    LAST KNOWN AREA
+                  </AtlasText>
                   <AtlasText variant="label">{selected.place}</AtlasText>
                 </View>
                 <View style={styles.eta}>
-                  <AtlasText variant="micro" color={theme.colors.textMuted}>ETA TO YOU</AtlasText>
-                  <AtlasText variant="label" color={palette.blue}>12 min</AtlasText>
+                  <AtlasText variant="micro" color={theme.colors.textMuted}>
+                    ETA TO YOU
+                  </AtlasText>
+                  <AtlasText variant="label" color={palette.blue}>
+                    12 min
+                  </AtlasText>
                 </View>
               </View>
             </View>
@@ -204,10 +259,17 @@ export function HomeScreen() {
             style={({ pressed }) => [
               styles.shareButton,
               shadow,
-              { backgroundColor: sharingActive ? theme.colors.surface : palette.blue, opacity: pressed ? 0.88 : 1 },
+              {
+                backgroundColor: sharingActive ? theme.colors.surface : palette.blue,
+                opacity: pressed ? 0.88 : 1,
+              },
             ]}
           >
-            {sharingActive ? <Radio size={20} color={palette.blue} /> : <Share2 size={20} color={palette.white} />}
+            {sharingActive ? (
+              <Radio size={20} color={palette.blue} />
+            ) : (
+              <Share2 size={20} color={palette.white} />
+            )}
             <AtlasText variant="label" color={sharingActive ? theme.colors.text : palette.white}>
               {sharingActive ? (stopping ? 'Stopping…' : 'Manage sharing') : 'Share my location'}
             </AtlasText>
@@ -223,21 +285,80 @@ export function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, overflow: 'hidden' },
   overlay: { flex: 1, justifyContent: 'space-between' },
-  topRow: { flexDirection: 'row', gap: spacing.sm, justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingTop: spacing.xs },
-  greeting: { alignItems: 'center', borderRadius: radii.lg, borderWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.sm, paddingVertical: 8 },
+  topRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.xs,
+  },
+  greeting: {
+    alignItems: 'center',
+    borderRadius: radii.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 8,
+  },
   statusRow: { left: spacing.md, position: 'absolute', top: 84 },
-  livePill: { alignItems: 'center', borderRadius: radii.pill, flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.sm, paddingVertical: 7 },
+  livePill: {
+    alignItems: 'center',
+    borderRadius: radii.pill,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 7,
+  },
   liveDot: { backgroundColor: palette.green, borderRadius: 6, height: 10, width: 10 },
   mapControls: { gap: spacing.xs, position: 'absolute', right: spacing.md, top: 114 },
-  sosFab: { alignItems: 'center', backgroundColor: palette.red, borderRadius: 18, gap: 1, justifyContent: 'center', minHeight: 58, position: 'absolute', right: spacing.md, top: 278, width: 58 },
+  sosFab: {
+    alignItems: 'center',
+    backgroundColor: palette.red,
+    borderRadius: 18,
+    gap: 1,
+    justifyContent: 'center',
+    minHeight: 58,
+    position: 'absolute',
+    right: spacing.md,
+    top: 278,
+    width: 58,
+  },
   bottomArea: { gap: spacing.sm, padding: spacing.md, paddingBottom: spacing.sm },
-  personCard: { borderRadius: radii.xl, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden', padding: spacing.md },
+  personCard: {
+    borderRadius: radii.xl,
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: 'hidden',
+    padding: spacing.md,
+  },
   personTop: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
   personCopy: { flex: 1 },
   nameRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
-  placeRow: { alignItems: 'center', borderTopWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm, paddingTop: spacing.sm },
-  placeIcon: { alignItems: 'center', backgroundColor: 'rgba(37,99,235,0.1)', borderRadius: 10, height: 32, justifyContent: 'center', width: 32 },
+  placeRow: {
+    alignItems: 'center',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+  },
+  placeIcon: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(37,99,235,0.1)',
+    borderRadius: 10,
+    height: 32,
+    justifyContent: 'center',
+    width: 32,
+  },
   placeCopy: { flex: 1 },
   eta: { alignItems: 'flex-end' },
-  shareButton: { alignItems: 'center', borderRadius: radii.lg, flexDirection: 'row', gap: spacing.sm, justifyContent: 'center', minHeight: 52, paddingHorizontal: spacing.lg },
+  shareButton: {
+    alignItems: 'center',
+    borderRadius: radii.lg,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    justifyContent: 'center',
+    minHeight: 52,
+    paddingHorizontal: spacing.lg,
+  },
 });
