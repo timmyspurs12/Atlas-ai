@@ -962,9 +962,11 @@ model AdministrativeArea {
   updatedAt      DateTime               @updatedAt @db.Timestamptz(3)
   deletedAt      DateTime?              @db.Timestamptz(3)
 
-  parent   AdministrativeArea?  @relation("AdministrativeAreaHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
-  children AdministrativeArea[] @relation("AdministrativeAreaHierarchy")
-  coverage TransitCoverage?
+  parent      AdministrativeArea?  @relation("AdministrativeAreaHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
+  children    AdministrativeArea[] @relation("AdministrativeAreaHierarchy")
+  coverage    TransitCoverage?
+  dataSources TransitDataSource[]
+  places      TransitPlace[]
 
   @@unique([parentId, normalizedName, type])
   @@index([parentId, type, deletedAt])
@@ -992,4 +994,104 @@ model TransitCoverage {
   @@index([status, deletedAt])
   @@index([qualityScore, status])
   @@map("transit_coverages")
+}
+
+model TransitDataSource {
+  id               String                @id @default(uuid()) @db.Uuid
+  areaId           String?               @db.Uuid
+  name             String                @db.VarChar(160)
+  type             TransitDataSourceType
+  organization     String?               @db.VarChar(160)
+  sourceUrl        String?               @db.VarChar(2048)
+  licenseName      String?               @db.VarChar(120)
+  licenseUrl       String?               @db.VarChar(2048)
+  reliabilityScore Int                   @default(50)
+  lastCheckedAt    DateTime?             @db.Timestamptz(3)
+  isActive         Boolean               @default(true)
+  notes            String?               @db.Text
+  createdAt        DateTime              @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime              @updatedAt @db.Timestamptz(3)
+  deletedAt        DateTime?             @db.Timestamptz(3)
+
+  area   AdministrativeArea? @relation(fields: [areaId], references: [id], onDelete: SetNull)
+  places TransitPlace[]
+
+  @@index([areaId, type, deletedAt])
+  @@index([isActive, reliabilityScore])
+  @@map("transit_data_sources")
+}
+
+model TransitPlace {
+  id                        String              @id @default(uuid()) @db.Uuid
+  areaId                    String              @db.Uuid
+  sourceId                  String?             @db.Uuid
+  code                      String              @unique @db.VarChar(60)
+  name                      String              @db.VarChar(160)
+  normalizedName            String              @db.VarChar(160)
+  type                      TransitPlaceType
+  latitude                  Decimal             @db.Decimal(10, 7)
+  longitude                 Decimal             @db.Decimal(10, 7)
+  locationAccuracyM         Decimal?            @db.Decimal(8, 2)
+  geohash                   String?             @db.VarChar(12)
+  address                   String?             @db.VarChar(300)
+  landmarkDescription       String?             @db.Text
+  defaultBoardingDirections String?             @db.Text
+  isWheelchairAccessible    Boolean?
+  verificationStatus        TransitReviewStatus @default(PENDING)
+  verifiedAt                DateTime?           @db.Timestamptz(3)
+  isActive                  Boolean             @default(true)
+  createdAt                 DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt                 DateTime            @updatedAt @db.Timestamptz(3)
+  deletedAt                 DateTime?           @db.Timestamptz(3)
+
+  area    AdministrativeArea  @relation(fields: [areaId], references: [id], onDelete: Restrict)
+  source  TransitDataSource?  @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  aliases TransitPlaceAlias[]
+  modes   TransitPlaceMode[]
+
+  @@index([areaId, type, isActive, deletedAt])
+  @@index([areaId, normalizedName, deletedAt])
+  @@index([normalizedName])
+  @@index([geohash])
+  @@index([latitude, longitude])
+  @@index([verificationStatus, isActive])
+  @@map("transit_places")
+}
+
+model TransitPlaceAlias {
+  id              String    @id @default(uuid()) @db.Uuid
+  placeId         String    @db.Uuid
+  alias           String    @db.VarChar(160)
+  normalizedAlias String    @db.VarChar(160)
+  locale          String    @default("en-NG") @db.VarChar(16)
+  isPrimary       Boolean   @default(false)
+  createdAt       DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @db.Timestamptz(3)
+  deletedAt       DateTime? @db.Timestamptz(3)
+
+  place TransitPlace @relation(fields: [placeId], references: [id], onDelete: Cascade)
+
+  @@unique([placeId, normalizedAlias, locale])
+  @@index([normalizedAlias, locale, deletedAt])
+  @@index([placeId, isPrimary, deletedAt])
+  @@map("transit_place_aliases")
+}
+
+model TransitPlaceMode {
+  id               String      @id @default(uuid()) @db.Uuid
+  placeId          String      @db.Uuid
+  mode             TransitMode
+  boardingAllowed  Boolean     @default(true)
+  alightingAllowed Boolean     @default(true)
+  operatingNotes   String?     @db.Text
+  createdAt        DateTime    @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime    @updatedAt @db.Timestamptz(3)
+  deletedAt        DateTime?   @db.Timestamptz(3)
+
+  place TransitPlace @relation(fields: [placeId], references: [id], onDelete: Cascade)
+
+  @@unique([placeId, mode])
+  @@index([mode, boardingAllowed, deletedAt])
+  @@index([placeId, deletedAt])
+  @@map("transit_place_modes")
 }
