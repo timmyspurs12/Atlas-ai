@@ -18,7 +18,7 @@
     "dev:api": "npm run start:dev --workspace @atlas/api",
     "build": "npm run build --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "lint": "NODE_OPTIONS=--max-old-space-size=4096 eslint apps packages --max-warnings=0",
+    "lint": "node --max-old-space-size=4096 ./node_modules/eslint/bin/eslint.js apps packages --max-warnings=0",
     "test": "npm run test --workspaces --if-present",
     "test:ci": "npm run test --workspaces --if-present -- --runInBand",
     "format": "prettier --write .",

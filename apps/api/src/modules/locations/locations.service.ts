@@ -214,7 +214,11 @@ export class LocationsService {
     return {
       outbound: shares
         .filter((share) => share.ownerId === userId)
-        .map((share) => ({ ...share, owner: undefined, recipient: serializeParty(share.recipient) })),
+        .map((share) => ({
+          ...share,
+          owner: undefined,
+          recipient: serializeParty(share.recipient),
+        })),
       inbound: shares
         .filter((share) => share.recipientId === userId)
         .map((share) => ({ ...share, recipient: undefined, owner: serializeParty(share.owner) })),
@@ -265,7 +269,10 @@ export class LocationsService {
     });
   }
 
-  async ingest(principal: AuthPrincipal, input: LocationUpdateDto): Promise<LocationBroadcast | null> {
+  async ingest(
+    principal: AuthPrincipal,
+    input: LocationUpdateDto,
+  ): Promise<LocationBroadcast | null> {
     const recordedAt = new Date(input.recordedAt);
     const age = Date.now() - recordedAt.getTime();
     if (age < -300_000 || age > 600_000) {
@@ -305,7 +312,9 @@ export class LocationsService {
       data,
     });
     if (accepted.count === 0) {
-      const current = await this.prisma.liveLocation.findUnique({ where: { userId: principal.userId } });
+      const current = await this.prisma.liveLocation.findUnique({
+        where: { userId: principal.userId },
+      });
       if (current && current.sequence >= sequence) return null;
       try {
         await this.prisma.liveLocation.create({ data: { userId: principal.userId, ...data } });

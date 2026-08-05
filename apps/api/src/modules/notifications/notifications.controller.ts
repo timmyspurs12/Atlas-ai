@@ -40,7 +40,9 @@ export class NotificationsController {
   }
 
   @Get('preferences')
-  preferences(@CurrentUser() principal: AuthPrincipal): ReturnType<NotificationsService['preferences']> {
+  preferences(
+    @CurrentUser() principal: AuthPrincipal,
+  ): ReturnType<NotificationsService['preferences']> {
     return this.notifications.preferences(principal.userId);
   }
 

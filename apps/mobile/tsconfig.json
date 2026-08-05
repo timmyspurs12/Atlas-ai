@@ -7,14 +7,10 @@
     "noImplicitOverride": true,
     "noUncheckedIndexedAccess": true,
     "paths": {
-      "@/*": [
-        "./src/*"
-      ]
+      "@/*": ["./src/*"]
     },
     "strict": true,
-    "types": [
-      "jest"
-    ]
+    "types": ["jest"]
   },
   "include": [
     "src/**/*.ts",

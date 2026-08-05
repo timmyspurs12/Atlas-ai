@@ -32,7 +32,10 @@ export class SafetyService {
     });
   }
 
-  async addContact(userId: string, input: CreateEmergencyContactDto): Promise<Record<string, unknown>> {
+  async addContact(
+    userId: string,
+    input: CreateEmergencyContactDto,
+  ): Promise<Record<string, unknown>> {
     if (!input.contactUserId && !input.phone && !input.email) {
       throw new BadRequestException('A linked Atlas user, phone number, or email is required');
     }
@@ -109,14 +112,16 @@ export class SafetyService {
       where: { clientRequestId: input.clientRequestId },
     });
     if (existing) {
-      if (existing.initiatorId !== principal.userId) throw new ConflictException('Request identifier already used');
+      if (existing.initiatorId !== principal.userId)
+        throw new ConflictException('Request identifier already used');
       return { id: existing.id, status: existing.status, expiresAt: existing.publicExpiresAt };
     }
 
     const contacts = await this.prisma.emergencyContact.findMany({
       where: { ownerId: principal.userId, isVerified: true, deletedAt: null },
     });
-    if (contacts.length === 0) throw new BadRequestException('Add a verified emergency contact first');
+    if (contacts.length === 0)
+      throw new BadRequestException('Add a verified emergency contact first');
     const profile = await this.prisma.profile.findUnique({ where: { userId: principal.userId } });
     const rawToken = randomBytes(32).toString('base64url');
     const tokenHash = this.hashToken(rawToken);
@@ -224,7 +229,10 @@ export class SafetyService {
     if (!recipient) throw new ForbiddenException('You are not an alert recipient');
     const now = new Date();
     await this.prisma.$transaction([
-      this.prisma.sosRecipient.update({ where: { id: recipient.id }, data: { acknowledgedAt: now } }),
+      this.prisma.sosRecipient.update({
+        where: { id: recipient.id },
+        data: { acknowledgedAt: now },
+      }),
       this.prisma.sosAlert.updateMany({
         where: { id: alertId, status: EmergencyStatus.ACTIVE },
         data: { status: EmergencyStatus.ACKNOWLEDGED, acknowledgedAt: now },

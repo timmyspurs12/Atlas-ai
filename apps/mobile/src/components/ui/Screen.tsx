@@ -20,7 +20,10 @@ export function Screen({
   const theme = useAtlasTheme();
   const content = [styles.content, padded && styles.padded, contentStyle];
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: theme.colors.background }]} edges={['top']}>
+    <SafeAreaView
+      style={[styles.safe, { backgroundColor: theme.colors.background }]}
+      edges={['top']}
+    >
       {scroll ? (
         <ScrollView
           {...props}

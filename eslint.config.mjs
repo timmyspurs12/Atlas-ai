@@ -32,7 +32,7 @@ export default tseslint.config(
       '@typescript-eslint/no-floating-promises': 'error',
       '@typescript-eslint/no-misused-promises': ['error', { checksVoidReturn: false }],
       '@typescript-eslint/no-explicit-any': 'error',
-      'no-console': ['error', { allow: ['warn', 'error'] }]
+      'no-console': ['error', { allow: ['warn', 'error'] }],
     },
   },
   {

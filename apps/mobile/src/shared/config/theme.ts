@@ -91,15 +91,35 @@ export const spacing = {
 export const radii = { sm: 10, md: 14, lg: 20, xl: 28, pill: 999 } as const;
 
 export const typography = {
-  hero: { fontFamily: 'Inter_700Bold', fontSize: 36, lineHeight: 42, letterSpacing: -1.2 } satisfies TextStyle,
-  h1: { fontFamily: 'Inter_700Bold', fontSize: 28, lineHeight: 34, letterSpacing: -0.7 } satisfies TextStyle,
-  h2: { fontFamily: 'Inter_700Bold', fontSize: 22, lineHeight: 28, letterSpacing: -0.4 } satisfies TextStyle,
+  hero: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 36,
+    lineHeight: 42,
+    letterSpacing: -1.2,
+  } satisfies TextStyle,
+  h1: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 28,
+    lineHeight: 34,
+    letterSpacing: -0.7,
+  } satisfies TextStyle,
+  h2: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 22,
+    lineHeight: 28,
+    letterSpacing: -0.4,
+  } satisfies TextStyle,
   h3: { fontFamily: 'Inter_600SemiBold', fontSize: 17, lineHeight: 22 } satisfies TextStyle,
   body: { fontFamily: 'Inter_400Regular', fontSize: 15, lineHeight: 22 } satisfies TextStyle,
   bodyMedium: { fontFamily: 'Inter_500Medium', fontSize: 15, lineHeight: 22 } satisfies TextStyle,
   label: { fontFamily: 'Inter_600SemiBold', fontSize: 13, lineHeight: 18 } satisfies TextStyle,
   caption: { fontFamily: 'Inter_500Medium', fontSize: 12, lineHeight: 16 } satisfies TextStyle,
-  micro: { fontFamily: 'Inter_600SemiBold', fontSize: 10, lineHeight: 13, letterSpacing: 0.4 } satisfies TextStyle,
+  micro: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 10,
+    lineHeight: 13,
+    letterSpacing: 0.4,
+  } satisfies TextStyle,
 } as const;
 
 export const shadow: ViewStyle = {

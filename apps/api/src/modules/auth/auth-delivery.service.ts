@@ -14,7 +14,9 @@ export class AuthDeliveryService {
     const from = this.config.get('TWILIO_FROM_NUMBER', { infer: true });
     if (!sid || !token || !from) {
       if (this.config.get('NODE_ENV', { infer: true }) === 'development') {
-        this.logger.warn(`SMS provider disabled; development verification code for ${phone}: ${code}`);
+        this.logger.warn(
+          `SMS provider disabled; development verification code for ${phone}: ${code}`,
+        );
       }
       return false;
     }
@@ -41,7 +43,9 @@ export class AuthDeliveryService {
     const resetUrl = `${this.config.get('APP_WEB_URL', { infer: true })}/reset-password?token=${encodeURIComponent(token)}`;
     if (!key) {
       if (this.config.get('NODE_ENV', { infer: true }) === 'development') {
-        this.logger.warn(`Email provider disabled; development reset link for ${email}: ${resetUrl}`);
+        this.logger.warn(
+          `Email provider disabled; development reset link for ${email}: ${resetUrl}`,
+        );
       }
       return;
     }

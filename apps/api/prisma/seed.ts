@@ -18,10 +18,34 @@ async function main(): Promise<void> {
     parallelism: 1,
   });
   const demoUsers = [
-    { email: 'maya@demo.atlas', displayName: 'Maya Okafor', handle: 'maya', lat: 6.4551, lng: 3.3942 },
-    { email: 'sarah@demo.atlas', displayName: 'Sarah Chen', handle: 'sarahc', lat: 6.4433, lng: 3.4148 },
-    { email: 'john@demo.atlas', displayName: 'John Adeyemi', handle: 'john.a', lat: 6.4698, lng: 3.3792 },
-    { email: 'leo@demo.atlas', displayName: 'Leo Martin', handle: 'leom', lat: 6.4478, lng: 3.3878 },
+    {
+      email: 'maya@demo.atlas',
+      displayName: 'Maya Okafor',
+      handle: 'maya',
+      lat: 6.4551,
+      lng: 3.3942,
+    },
+    {
+      email: 'sarah@demo.atlas',
+      displayName: 'Sarah Chen',
+      handle: 'sarahc',
+      lat: 6.4433,
+      lng: 3.4148,
+    },
+    {
+      email: 'john@demo.atlas',
+      displayName: 'John Adeyemi',
+      handle: 'john.a',
+      lat: 6.4698,
+      lng: 3.3792,
+    },
+    {
+      email: 'leo@demo.atlas',
+      displayName: 'Leo Martin',
+      handle: 'leom',
+      lat: 6.4478,
+      lng: 3.3878,
+    },
   ];
 
   const users = [];

@@ -29,7 +29,10 @@ export class SocialTokenService {
         const configured =
           this.config.get('GOOGLE_CLIENT_IDS', { infer: true }) ??
           this.config.get('GOOGLE_CLIENT_ID', { infer: true });
-        const audience = configured?.split(',').map((value) => value.trim()).filter(Boolean);
+        const audience = configured
+          ?.split(',')
+          .map((value) => value.trim())
+          .filter(Boolean);
         if (!audience?.length) throw new UnauthorizedException('Google login is not configured');
         const { payload } = await jwtVerify(idToken, await googleKeySet, {
           audience,

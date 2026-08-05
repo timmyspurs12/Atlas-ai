@@ -56,7 +56,10 @@ export class LocationsGateway implements OnGatewayConnection, OnGatewayDisconnec
       this.socketData(client).principal = principal;
       await client.join(this.userRoom(principal.userId));
       await this.markPresent(principal.userId);
-      client.emit('presence:ready', { recovered: client.recovered, serverTime: new Date().toISOString() });
+      client.emit('presence:ready', {
+        recovered: client.recovered,
+        serverTime: new Date().toISOString(),
+      });
     } catch {
       client.emit('auth:error', { code: 'UNAUTHORIZED', message: 'Socket authentication failed' });
       client.disconnect(true);
@@ -79,12 +82,16 @@ export class LocationsGateway implements OnGatewayConnection, OnGatewayDisconnec
         lastSeenAt: new Date().toISOString(),
       });
     } catch (error) {
-      this.logger.warn(`Disconnect cleanup failed: ${error instanceof Error ? error.message : 'unknown'}`);
+      this.logger.warn(
+        `Disconnect cleanup failed: ${error instanceof Error ? error.message : 'unknown'}`,
+      );
     }
   }
 
   @SubscribeMessage('heartbeat')
-  async heartbeat(@ConnectedSocket() client: AuthenticatedSocket): Promise<{ ok: true; serverTime: string }> {
+  async heartbeat(
+    @ConnectedSocket() client: AuthenticatedSocket,
+  ): Promise<{ ok: true; serverTime: string }> {
     const principal = this.principal(client);
     await this.markPresent(principal.userId);
     return { ok: true, serverTime: new Date().toISOString() };
@@ -135,7 +142,9 @@ export class LocationsGateway implements OnGatewayConnection, OnGatewayDisconnec
       await this.redis.connect();
       await this.redis.client.set(`presence:${userId}`, Date.now().toString(), 'EX', 45);
     } catch (error) {
-      this.logger.warn(`Presence update failed: ${error instanceof Error ? error.message : 'unknown'}`);
+      this.logger.warn(
+        `Presence update failed: ${error instanceof Error ? error.message : 'unknown'}`,
+      );
     }
   }
 

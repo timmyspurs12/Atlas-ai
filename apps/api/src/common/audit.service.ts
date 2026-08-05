@@ -53,7 +53,10 @@ export class AuditService {
         },
       });
     } catch (error) {
-      this.logger.error(`Failed to write audit event ${event.action}`, error instanceof Error ? error.stack : undefined);
+      this.logger.error(
+        `Failed to write audit event ${event.action}`,
+        error instanceof Error ? error.stack : undefined,
+      );
     }
   }
 }

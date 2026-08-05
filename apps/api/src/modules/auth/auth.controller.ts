@@ -36,7 +36,10 @@ export class AuthController {
   @Post('register')
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @ApiOperation({ summary: 'Create a user, device, and rotating session' })
-  register(@Body() input: RegisterDto, @Req() request: Request): ReturnType<AuthService['register']> {
+  register(
+    @Body() input: RegisterDto,
+    @Req() request: Request,
+  ): ReturnType<AuthService['register']> {
     return this.auth.register(input, this.metadata(request));
   }
 
@@ -54,7 +57,10 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @ApiOperation({ summary: 'Authenticate with a verified Apple or Google identity token' })
-  social(@Body() input: SocialLoginDto, @Req() request: Request): ReturnType<AuthService['socialLogin']> {
+  social(
+    @Body() input: SocialLoginDto,
+    @Req() request: Request,
+  ): ReturnType<AuthService['socialLogin']> {
     return this.auth.socialLogin(input, this.metadata(request));
   }
 
@@ -69,10 +75,7 @@ export class AuthController {
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiBearerAuth()
-  async logout(
-    @CurrentUser() principal: AuthPrincipal,
-    @Req() request: Request,
-  ): Promise<void> {
+  async logout(@CurrentUser() principal: AuthPrincipal, @Req() request: Request): Promise<void> {
     await this.auth.logout(principal, this.metadata(request));
   }
 
@@ -115,7 +118,9 @@ export class AuthController {
   @Post('forgot-password')
   @HttpCode(HttpStatus.ACCEPTED)
   @Throttle({ default: { limit: 3, ttl: 300_000 } })
-  forgotPassword(@Body() input: ForgotPasswordDto): ReturnType<AuthService['requestPasswordReset']> {
+  forgotPassword(
+    @Body() input: ForgotPasswordDto,
+  ): ReturnType<AuthService['requestPasswordReset']> {
     return this.auth.requestPasswordReset(input);
   }
 

@@ -1,15 +1,6 @@
 import { useEffect } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import Svg, {
-  Circle,
-  Defs,
-  G,
-  LinearGradient,
-  Path,
-  Pattern,
-  Rect,
-  Stop,
-} from 'react-native-svg';
+import Svg, { Circle, Defs, G, LinearGradient, Path, Pattern, Rect, Stop } from 'react-native-svg';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -51,10 +42,7 @@ function PersonMarker({ person, selected, onPress }: MarkerProps) {
   return (
     <View
       pointerEvents="box-none"
-      style={[
-        styles.markerWrap,
-        { left: `${person.mapX}%`, top: `${person.mapY}%` },
-      ]}
+      style={[styles.markerWrap, { left: `${person.mapX}%`, top: `${person.mapY}%` }]}
     >
       <Animated.View style={[styles.pulse, { backgroundColor: person.color }, pulseStyle]} />
       <Pressable

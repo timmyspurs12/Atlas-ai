@@ -64,7 +64,10 @@ export class EmergencyDeliveryService {
     if (tokens.length === 0) return ['push', false];
     const result = await getMessaging().sendEachForMulticast({
       tokens,
-      notification: { title: `SOS from ${senderName}`, body: 'Open Atlas AI to see their live safety alert.' },
+      notification: {
+        title: `SOS from ${senderName}`,
+        body: 'Open Atlas AI to see their live safety alert.',
+      },
       data: { type: 'SOS', url },
       android: { priority: 'high' },
       apns: { headers: { 'apns-priority': '10' }, payload: { aps: { sound: 'default' } } },
@@ -82,14 +85,17 @@ export class EmergencyDeliveryService {
       From: from,
       Body: `SOS from ${senderName}. View their time-limited Atlas safety link: ${url}`,
     });
-    const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Basic ${Buffer.from(`${sid}:${token}`).toString('base64')}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
+    const response = await fetch(
+      `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Basic ${Buffer.from(`${sid}:${token}`).toString('base64')}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body,
       },
-      body,
-    });
+    );
     if (!response.ok) this.logger.error(`SMS provider returned ${response.status}`);
     return ['sms', response.ok];
   }

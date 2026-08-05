@@ -33,7 +33,14 @@ function GoogleButton() {
       accessibilityLabel="Continue with Google"
       disabled={!request}
       onPress={() => void promptAsync()}
-      style={({ pressed }) => [styles.socialButton, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface, opacity: pressed ? 0.7 : 1 }]}
+      style={({ pressed }) => [
+        styles.socialButton,
+        {
+          borderColor: theme.colors.border,
+          backgroundColor: theme.colors.surface,
+          opacity: pressed ? 0.7 : 1,
+        },
+      ]}
     >
       <Chrome size={19} color="#4285F4" />
       <AtlasText variant="label">Google</AtlasText>
@@ -79,7 +86,9 @@ export function SocialSignIn() {
     <View style={styles.wrap}>
       <View style={styles.dividerRow}>
         <View style={[styles.line, { backgroundColor: theme.colors.border }]} />
-        <AtlasText variant="micro" color={theme.colors.textMuted}>OR CONTINUE WITH</AtlasText>
+        <AtlasText variant="micro" color={theme.colors.textMuted}>
+          OR CONTINUE WITH
+        </AtlasText>
         <View style={[styles.line, { backgroundColor: theme.colors.border }]} />
       </View>
       <View style={styles.buttons}>
@@ -89,10 +98,22 @@ export function SocialSignIn() {
             accessibilityRole="button"
             accessibilityLabel="Continue with Apple"
             onPress={() => void signInWithApple()}
-            style={({ pressed }) => [styles.socialButton, { backgroundColor: theme.dark ? palette.white : palette.ink, opacity: pressed ? 0.75 : 1 }]}
+            style={({ pressed }) => [
+              styles.socialButton,
+              {
+                backgroundColor: theme.dark ? palette.white : palette.ink,
+                opacity: pressed ? 0.75 : 1,
+              },
+            ]}
           >
-            <Apple size={19} color={theme.dark ? palette.ink : palette.white} fill={theme.dark ? palette.ink : palette.white} />
-            <AtlasText variant="label" color={theme.dark ? palette.ink : palette.white}>Apple</AtlasText>
+            <Apple
+              size={19}
+              color={theme.dark ? palette.ink : palette.white}
+              fill={theme.dark ? palette.ink : palette.white}
+            />
+            <AtlasText variant="label" color={theme.dark ? palette.ink : palette.white}>
+              Apple
+            </AtlasText>
           </Pressable>
         ) : null}
       </View>
@@ -105,5 +126,15 @@ const styles = StyleSheet.create({
   dividerRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
   line: { flex: 1, height: StyleSheet.hairlineWidth },
   buttons: { flexDirection: 'row', gap: spacing.sm },
-  socialButton: { alignItems: 'center', borderRadius: radii.md, borderWidth: 1, flex: 1, flexDirection: 'row', gap: spacing.xs, justifyContent: 'center', minHeight: 50, paddingHorizontal: spacing.md },
+  socialButton: {
+    alignItems: 'center',
+    borderRadius: radii.md,
+    borderWidth: 1,
+    flex: 1,
+    flexDirection: 'row',
+    gap: spacing.xs,
+    justifyContent: 'center',
+    minHeight: 50,
+    paddingHorizontal: spacing.md,
+  },
 });

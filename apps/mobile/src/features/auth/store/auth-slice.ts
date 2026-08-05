@@ -59,10 +59,7 @@ export const loginUser = createAsyncThunk(
 
 export const registerUser = createAsyncThunk(
   'auth/register',
-  async (
-    input: { email: string; password: string; displayName: string },
-    { rejectWithValue },
-  ) => {
+  async (input: { email: string; password: string; displayName: string }, { rejectWithValue }) => {
     try {
       return await authService.register(input);
     } catch (error) {
@@ -158,7 +155,8 @@ const authSlice = createSlice({
       })
       .addCase(socialLoginUser.rejected, (state, action) => {
         state.status = 'signedOut';
-        state.error = typeof action.payload === 'string' ? action.payload : 'Social sign in failed.';
+        state.error =
+          typeof action.payload === 'string' ? action.payload : 'Social sign in failed.';
       })
       .addCase(logoutUser.fulfilled, (state) => {
         state.status = 'signedOut';

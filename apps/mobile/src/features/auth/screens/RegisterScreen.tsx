@@ -44,16 +44,26 @@ export function RegisterScreen({ navigation }: Props) {
   });
   const password = useWatch({ control, name: 'password' });
   const strength = useMemo(
-    () => [password.length >= 12, /[A-Z]/.test(password), /[0-9]/.test(password)].filter(Boolean).length,
+    () =>
+      [password.length >= 12, /[A-Z]/.test(password), /[0-9]/.test(password)].filter(Boolean)
+        .length,
     [password],
   );
-  useEffect(() => () => {
-    dispatch(clearAuthError());
-  }, [dispatch]);
+  useEffect(
+    () => () => {
+      dispatch(clearAuthError());
+    },
+    [dispatch],
+  );
 
   return (
     <Screen contentStyle={styles.content}>
-      <IconButton icon={ArrowLeft} label="Back" onPress={() => navigation.goBack()} style={styles.back} />
+      <IconButton
+        icon={ArrowLeft}
+        label="Back"
+        onPress={() => navigation.goBack()}
+        style={styles.back}
+      />
       <View style={styles.heading}>
         <AtlasText variant="h1">Create your Atlas</AtlasText>
         <AtlasText color={theme.colors.textMuted}>
@@ -148,9 +158,13 @@ export function RegisterScreen({ navigation }: Props) {
                 >
                   {value ? <Check size={14} color={palette.white} strokeWidth={3} /> : null}
                 </View>
-                <AtlasText variant="caption" color={theme.colors.textMuted} style={styles.termsText}>
-                  I agree to the Terms of Service and Privacy Policy. I understand location sharing is
-                  voluntary and revocable.
+                <AtlasText
+                  variant="caption"
+                  color={theme.colors.textMuted}
+                  style={styles.termsText}
+                >
+                  I agree to the Terms of Service and Privacy Policy. I understand location sharing
+                  is voluntary and revocable.
                 </AtlasText>
               </Pressable>
               {errors.accepted ? (

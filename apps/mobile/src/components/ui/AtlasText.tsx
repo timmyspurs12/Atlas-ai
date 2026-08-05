@@ -10,22 +10,12 @@ interface AtlasTextProps extends TextProps {
   align?: TextStyle['textAlign'];
 }
 
-export function AtlasText({
-  variant = 'body',
-  color,
-  align,
-  style,
-  ...props
-}: AtlasTextProps) {
+export function AtlasText({ variant = 'body', color, align, style, ...props }: AtlasTextProps) {
   const theme = useAtlasTheme();
   return (
     <Text
       {...props}
-      style={[
-        typography[variant],
-        { color: color ?? theme.colors.text, textAlign: align },
-        style,
-      ]}
+      style={[typography[variant], { color: color ?? theme.colors.text, textAlign: align }, style]}
     />
   );
 }

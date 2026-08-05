@@ -1,11 +1,5 @@
 import { forwardRef, useState } from 'react';
-import {
-  Pressable,
-  StyleSheet,
-  TextInput,
-  View,
-  type TextInputProps,
-} from 'react-native';
+import { Pressable, StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
 import { Eye, EyeOff, type LucideIcon } from 'lucide-react-native';
 import { AtlasText } from './AtlasText';
 import { radii, spacing, typography } from '@/shared/config/theme';

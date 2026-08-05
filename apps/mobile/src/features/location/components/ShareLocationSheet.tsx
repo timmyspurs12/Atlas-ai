@@ -1,12 +1,5 @@
 import { useMemo, useState } from 'react';
-import {
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  View,
-} from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import Animated, { FadeIn, SlideInDown } from 'react-native-reanimated';
 import { Check, Clock3, LocateFixed, ShieldCheck, X } from 'lucide-react-native';
 import { Avatar } from '@/components/ui/Avatar';
@@ -125,7 +118,10 @@ export function ShareLocationSheet({ visible, onClose }: ShareLocationSheetProps
             <IconButton icon={X} label="Close sharing sheet" onPress={onClose} size={40} />
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+          >
             <AtlasText variant="micro" color={theme.colors.textMuted}>
               SHARE WITH
             </AtlasText>
@@ -189,7 +185,9 @@ export function ShareLocationSheet({ visible, onClose }: ShareLocationSheetProps
             </View>
 
             <View style={[styles.optionCard, { borderColor: theme.colors.border }]}>
-              <View style={styles.optionIcon}><LocateFixed size={18} color={palette.blue} /></View>
+              <View style={styles.optionIcon}>
+                <LocateFixed size={18} color={palette.blue} />
+              </View>
               <View style={styles.optionCopy}>
                 <AtlasText variant="label">Precise location</AtlasText>
                 <AtlasText variant="caption" color={theme.colors.textMuted}>
@@ -204,7 +202,9 @@ export function ShareLocationSheet({ visible, onClose }: ShareLocationSheetProps
               />
             </View>
             <View style={[styles.optionCard, { borderColor: theme.colors.border }]}>
-              <View style={styles.optionIcon}><Clock3 size={18} color={palette.teal} /></View>
+              <View style={styles.optionIcon}>
+                <Clock3 size={18} color={palette.teal} />
+              </View>
               <View style={styles.optionCopy}>
                 <AtlasText variant="label">Continue in background</AtlasText>
                 <AtlasText variant="caption" color={theme.colors.textMuted}>
@@ -219,7 +219,9 @@ export function ShareLocationSheet({ visible, onClose }: ShareLocationSheetProps
               />
             </View>
             <View style={[styles.optionCard, { borderColor: theme.colors.border }]}>
-              <View style={styles.optionIcon}><ShieldCheck size={18} color={palette.teal} /></View>
+              <View style={styles.optionIcon}>
+                <ShieldCheck size={18} color={palette.teal} />
+              </View>
               <View style={styles.optionCopy}>
                 <AtlasText variant="label">Allow place alerts</AtlasText>
                 <AtlasText variant="caption" color={theme.colors.textMuted}>
@@ -235,13 +237,17 @@ export function ShareLocationSheet({ visible, onClose }: ShareLocationSheetProps
             </View>
             {error ? (
               <View style={styles.error} accessibilityRole="alert">
-                <AtlasText variant="caption" color={palette.red}>{error}</AtlasText>
+                <AtlasText variant="caption" color={palette.red}>
+                  {error}
+                </AtlasText>
               </View>
             ) : null}
           </ScrollView>
           <View style={[styles.footer, { borderColor: theme.colors.border }]}>
             <View style={styles.footerMeta}>
-              <AtlasText variant="micro" color={theme.colors.textMuted}>AUTO-STOPS</AtlasText>
+              <AtlasText variant="micro" color={theme.colors.textMuted}>
+                AUTO-STOPS
+              </AtlasText>
               <AtlasText variant="label">{selectedLabel}</AtlasText>
             </View>
             <Button
@@ -260,20 +266,75 @@ export function ShareLocationSheet({ visible, onClose }: ShareLocationSheetProps
 
 const styles = StyleSheet.create({
   backdrop: { backgroundColor: 'rgba(2,6,23,0.58)', flex: 1, justifyContent: 'flex-end' },
-  sheet: { borderTopLeftRadius: 30, borderTopRightRadius: 30, maxHeight: '91%', paddingTop: spacing.sm },
-  handle: { alignSelf: 'center', backgroundColor: palette.slate400, borderRadius: 3, height: 4, opacity: 0.45, width: 42 },
-  header: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', padding: spacing.lg },
+  sheet: {
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    maxHeight: '91%',
+    paddingTop: spacing.sm,
+  },
+  handle: {
+    alignSelf: 'center',
+    backgroundColor: palette.slate400,
+    borderRadius: 3,
+    height: 4,
+    opacity: 0.45,
+    width: 42,
+  },
+  header: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: spacing.lg,
+  },
   scrollContent: { gap: spacing.md, paddingHorizontal: spacing.lg, paddingBottom: spacing.lg },
   peopleRow: { flexDirection: 'row', gap: spacing.lg },
   personChoice: { alignItems: 'center', gap: 6, width: 58 },
-  check: { alignItems: 'center', borderRadius: 9, borderWidth: 2, bottom: -2, height: 19, justifyContent: 'center', position: 'absolute', right: -2, width: 19 },
+  check: {
+    alignItems: 'center',
+    borderRadius: 9,
+    borderWidth: 2,
+    bottom: -2,
+    height: 19,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: -2,
+    width: 19,
+  },
   segmentRow: { flexDirection: 'row', gap: spacing.xs },
-  segment: { alignItems: 'center', borderRadius: radii.md, borderWidth: 1, flex: 1, justifyContent: 'center', minHeight: 43, paddingHorizontal: 4 },
-  optionCard: { alignItems: 'center', borderRadius: radii.md, borderWidth: 1, flexDirection: 'row', gap: spacing.sm, padding: spacing.sm },
-  optionIcon: { alignItems: 'center', backgroundColor: 'rgba(37,99,235,0.08)', borderRadius: 12, height: 38, justifyContent: 'center', width: 38 },
+  segment: {
+    alignItems: 'center',
+    borderRadius: radii.md,
+    borderWidth: 1,
+    flex: 1,
+    justifyContent: 'center',
+    minHeight: 43,
+    paddingHorizontal: 4,
+  },
+  optionCard: {
+    alignItems: 'center',
+    borderRadius: radii.md,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    padding: spacing.sm,
+  },
+  optionIcon: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(37,99,235,0.08)',
+    borderRadius: 12,
+    height: 38,
+    justifyContent: 'center',
+    width: 38,
+  },
   optionCopy: { flex: 1 },
   error: { backgroundColor: 'rgba(239,68,68,0.08)', borderRadius: radii.sm, padding: spacing.sm },
-  footer: { alignItems: 'center', borderTopWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: spacing.md, padding: spacing.lg },
+  footer: {
+    alignItems: 'center',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    gap: spacing.md,
+    padding: spacing.lg,
+  },
   footerMeta: { flex: 1 },
   startButton: { minWidth: 160 },
 });

@@ -118,7 +118,7 @@ Open these URLs:
 Expected health response:
 
 ```json
-{"status":"ok"}
+{ "status": "ok" }
 ```
 
 If the API cannot connect to PostgreSQL, confirm Docker is running and the `DATABASE_URL` in `apps/api/.env` uses `localhost:5432`.

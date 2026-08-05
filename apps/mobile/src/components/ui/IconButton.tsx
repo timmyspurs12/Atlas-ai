@@ -47,7 +47,11 @@ export function IconButton({
         style,
       ]}
     >
-      <Icon color={danger ? theme.colors.danger : theme.colors.text} size={iconSize} strokeWidth={2.2} />
+      <Icon
+        color={danger ? theme.colors.danger : theme.colors.text}
+        size={iconSize}
+        strokeWidth={2.2}
+      />
     </Pressable>
   );
 }
