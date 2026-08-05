@@ -166,15 +166,6 @@ enum AiRole {
   SYSTEM
 }
 
-enum TransitFareTimeBand {
-  ANYTIME
-  MORNING_PEAK
-  EVENING_PEAK
-  OFF_PEAK
-  NIGHT
-  WEEKEND
-}
-
 model User {
   id                  String     @id @default(uuid()) @db.Uuid
   email               String?    @unique @db.VarChar(320)
@@ -192,42 +183,44 @@ model User {
   updatedAt           DateTime   @updatedAt @db.Timestamptz(3)
   deletedAt           DateTime?  @db.Timestamptz(3)
 
-  profile                 Profile?
-  sentFriendRequests      Friendship[]             @relation("FriendshipRequester")
-  receivedFriendRequests  Friendship[]             @relation("FriendshipAddressee")
-  blocksInitiated         UserBlock[]              @relation("Blocker")
-  blocksReceived          UserBlock[]              @relation("BlockedUser")
-  locationSharesOwned     LocationShare[]          @relation("ShareOwner")
-  locationSharesReceived  LocationShare[]          @relation("ShareRecipient")
-  locationSharesRevoked   LocationShare[]          @relation("ShareRevoker")
-  liveLocation            LiveLocation?
-  trips                   Trip[]
-  messages                Message[]                @relation("MessageSender")
-  messageReceipts         MessageReceipt[]
-  conversationMemberships ConversationMember[]
-  conversationsCreated    Conversation[]           @relation("ConversationCreator")
-  notifications           Notification[]           @relation("NotificationRecipient")
-  notificationPreference  NotificationPreference?
-  notificationsActed      Notification[]           @relation("NotificationActor")
-  emergencyContactsOwned  EmergencyContact[]       @relation("EmergencyOwner")
-  emergencyContactFor     EmergencyContact[]       @relation("EmergencyContactUser")
-  geofencesOwned          Geofence[]               @relation("GeofenceOwner")
-  geofencesAsSubject      Geofence[]               @relation("GeofenceSubject")
-  devices                 Device[]
-  sessions                Session[]
-  subscriptions           Subscription[]
-  auditLogs               AuditLog[]               @relation("AuditActor")
-  verificationChallenges  VerificationChallenge[]
-  authIdentities          AuthIdentity[]
-  sosAlerts               SosAlert[]               @relation("SosInitiator")
-  sosRecipients           SosRecipient[]
-  aiConversations         AiConversation[]
-  transitRoutesCreated    TransitRoute[]           @relation("TransitRouteCreator")
-  transitRoutesPublished  TransitRoute[]           @relation("TransitRoutePublisher")
-  transitFareObservations TransitFareObservation[] @relation("TransitFareRecorder")
-  transitRouteRevisions   TransitRouteRevision[]   @relation("TransitRevisionCreator")
-  transitRouteReviews     TransitRouteReview[]     @relation("TransitRouteReviewer")
-  transitImportJobs       TransitImportJob[]       @relation("TransitImportCreator")
+  profile                     Profile?
+  sentFriendRequests          Friendship[]             @relation("FriendshipRequester")
+  receivedFriendRequests      Friendship[]             @relation("FriendshipAddressee")
+  blocksInitiated             UserBlock[]              @relation("Blocker")
+  blocksReceived              UserBlock[]              @relation("BlockedUser")
+  locationSharesOwned         LocationShare[]          @relation("ShareOwner")
+  locationSharesReceived      LocationShare[]          @relation("ShareRecipient")
+  locationSharesRevoked       LocationShare[]          @relation("ShareRevoker")
+  liveLocation                LiveLocation?
+  trips                       Trip[]
+  messages                    Message[]                @relation("MessageSender")
+  messageReceipts             MessageReceipt[]
+  conversationMemberships     ConversationMember[]
+  conversationsCreated        Conversation[]           @relation("ConversationCreator")
+  notifications               Notification[]           @relation("NotificationRecipient")
+  notificationPreference      NotificationPreference?
+  notificationsActed          Notification[]           @relation("NotificationActor")
+  emergencyContactsOwned      EmergencyContact[]       @relation("EmergencyOwner")
+  emergencyContactFor         EmergencyContact[]       @relation("EmergencyContactUser")
+  geofencesOwned              Geofence[]               @relation("GeofenceOwner")
+  geofencesAsSubject          Geofence[]               @relation("GeofenceSubject")
+  devices                     Device[]
+  sessions                    Session[]
+  subscriptions               Subscription[]
+  auditLogs                   AuditLog[]               @relation("AuditActor")
+  verificationChallenges      VerificationChallenge[]
+  authIdentities              AuthIdentity[]
+  sosAlerts                   SosAlert[]               @relation("SosInitiator")
+  sosRecipients               SosRecipient[]
+  aiConversations             AiConversation[]
+  transitRoutesCreated        TransitRoute[]           @relation("TransitRouteCreator")
+  transitRoutesPublished      TransitRoute[]           @relation("TransitRoutePublisher")
+  transitFareObservations     TransitFareObservation[] @relation("TransitFareRecorder")
+  transitRouteRevisions       TransitRouteRevision[]   @relation("TransitRevisionCreator")
+  transitRouteReviews         TransitRouteReview[]     @relation("TransitRouteReviewer")
+  transitImportJobs           TransitImportJob[]       @relation("TransitImportCreator")
+  transitDisruptionsPublished TransitDisruption[]      @relation("TransitDisruptionPublisher")
+  savedTransitJourneys        SavedTransitJourney[]
 
   @@index([status, deletedAt])
   @@map("users")
@@ -960,6 +953,37 @@ enum TransitServiceDay {
   SUNDAY
 }
 
+enum TransitFareTimeBand {
+  ANYTIME
+  MORNING_PEAK
+  EVENING_PEAK
+  OFF_PEAK
+  NIGHT
+  WEEKEND
+}
+
+enum TransitDisruptionStatus {
+  SCHEDULED
+  ACTIVE
+  RESOLVED
+  CANCELLED
+}
+
+enum TransitDisruptionSeverity {
+  INFO
+  MINOR
+  MAJOR
+  CRITICAL
+}
+
+enum TransitJourneyStatus {
+  PLANNED
+  ACTIVE
+  COMPLETED
+  CANCELLED
+  EXPIRED
+}
+
 model AdministrativeArea {
   id             String                 @id @default(uuid()) @db.Uuid
   parentId       String?                @db.Uuid
@@ -984,6 +1008,7 @@ model AdministrativeArea {
   places      TransitPlace[]
   routes      TransitRoute[]
   importJobs  TransitImportJob[]
+  disruptions TransitDisruption[]
 
   @@unique([parentId, normalizedName, type])
   @@index([parentId, type, deletedAt])
@@ -1035,6 +1060,7 @@ model TransitDataSource {
   routes           TransitRoute[]
   fareObservations TransitFareObservation[]
   importJobs       TransitImportJob[]
+  disruptions      TransitDisruption[]
 
   @@index([areaId, type, deletedAt])
   @@index([isActive, reliabilityScore])
@@ -1064,15 +1090,20 @@ model TransitPlace {
   updatedAt                 DateTime            @updatedAt @db.Timestamptz(3)
   deletedAt                 DateTime?           @db.Timestamptz(3)
 
-  area                 AdministrativeArea       @relation(fields: [areaId], references: [id], onDelete: Restrict)
-  source               TransitDataSource?       @relation(fields: [sourceId], references: [id], onDelete: SetNull)
-  aliases              TransitPlaceAlias[]
-  modes                TransitPlaceMode[]
-  originRoutes         TransitRoute[]           @relation("TransitRouteOrigin")
-  destinationRoutes    TransitRoute[]           @relation("TransitRouteDestination")
-  routeStops           TransitRouteStop[]
-  fareObservationsFrom TransitFareObservation[] @relation("TransitFareFromPlace")
-  fareObservationsTo   TransitFareObservation[] @relation("TransitFareToPlace")
+  area                     AdministrativeArea       @relation(fields: [areaId], references: [id], onDelete: Restrict)
+  source                   TransitDataSource?       @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  aliases                  TransitPlaceAlias[]
+  modes                    TransitPlaceMode[]
+  originRoutes             TransitRoute[]           @relation("TransitRouteOrigin")
+  destinationRoutes        TransitRoute[]           @relation("TransitRouteDestination")
+  routeStops               TransitRouteStop[]
+  fareObservationsFrom     TransitFareObservation[] @relation("TransitFareFromPlace")
+  fareObservationsTo       TransitFareObservation[] @relation("TransitFareToPlace")
+  disruptions              TransitDisruption[]
+  savedJourneyOrigins      SavedTransitJourney[]    @relation("SavedJourneyOrigin")
+  savedJourneyDestinations SavedTransitJourney[]    @relation("SavedJourneyDestination")
+  journeyLegsFrom          SavedTransitJourneyLeg[] @relation("SavedJourneyLegFrom")
+  journeyLegsTo            SavedTransitJourneyLeg[] @relation("SavedJourneyLegTo")
 
   @@index([areaId, type, isActive, deletedAt])
   @@index([areaId, normalizedName, deletedAt])
@@ -1129,6 +1160,7 @@ model TransitRoute {
   publishedById      String?            @db.Uuid
   originPlaceId      String             @db.Uuid
   destinationPlaceId String             @db.Uuid
+  currentRevisionId  String?            @unique @db.Uuid
   code               String             @unique @db.VarChar(80)
   name               String             @db.VarChar(180)
   normalizedName     String             @db.VarChar(180)
@@ -1143,7 +1175,6 @@ model TransitRoute {
   durationMinMinutes Int?
   durationMaxMinutes Int?
   dataVersion        Int                @default(1)
-  currentRevisionId  String?            @unique @db.Uuid
   confidenceScore    Int                @default(0)
   lastVerifiedAt     DateTime?          @db.Timestamptz(3)
   submittedAt        DateTime?          @db.Timestamptz(3)
@@ -1165,6 +1196,8 @@ model TransitRoute {
   fareObservations TransitFareObservation[]
   currentRevision  TransitRouteRevision?    @relation("TransitRouteCurrentRevision", fields: [currentRevisionId], references: [id], onDelete: SetNull)
   revisions        TransitRouteRevision[]   @relation("TransitRouteRevisionHistory")
+  disruptions      TransitDisruption[]
+  journeyLegs      SavedTransitJourneyLeg[]
 
   @@index([areaId, status, mode, deletedAt])
   @@index([originPlaceId, destinationPlaceId, status])
@@ -1358,4 +1391,104 @@ model TransitImportJob {
   @@index([createdById, status])
   @@index([checksum])
   @@map("transit_import_jobs")
+}
+
+model TransitDisruption {
+  id            String                    @id @default(uuid()) @db.Uuid
+  areaId        String                    @db.Uuid
+  routeId       String?                   @db.Uuid
+  placeId       String?                   @db.Uuid
+  sourceId      String?                   @db.Uuid
+  publishedById String                    @db.Uuid
+  status        TransitDisruptionStatus
+  severity      TransitDisruptionSeverity @default(INFO)
+  title         String                    @db.VarChar(180)
+  description   String                    @db.Text
+  startsAt      DateTime                  @db.Timestamptz(3)
+  endsAt        DateTime?                 @db.Timestamptz(3)
+  publishedAt   DateTime?                 @db.Timestamptz(3)
+  resolvedAt    DateTime?                 @db.Timestamptz(3)
+  createdAt     DateTime                  @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime                  @updatedAt @db.Timestamptz(3)
+  deletedAt     DateTime?                 @db.Timestamptz(3)
+
+  area        AdministrativeArea @relation(fields: [areaId], references: [id], onDelete: Restrict)
+  route       TransitRoute?      @relation(fields: [routeId], references: [id], onDelete: SetNull)
+  place       TransitPlace?      @relation(fields: [placeId], references: [id], onDelete: SetNull)
+  source      TransitDataSource? @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  publishedBy User               @relation("TransitDisruptionPublisher", fields: [publishedById], references: [id], onDelete: Restrict)
+
+  @@index([areaId, status, startsAt, endsAt])
+  @@index([routeId, status, deletedAt])
+  @@index([placeId, status, deletedAt])
+  @@index([severity, status, startsAt])
+  @@map("transit_disruptions")
+}
+
+model SavedTransitJourney {
+  id                      String                   @id @default(uuid()) @db.Uuid
+  userId                  String                   @db.Uuid
+  originPlaceId           String?                  @db.Uuid
+  destinationPlaceId      String?                  @db.Uuid
+  originLabel             String                   @db.VarChar(180)
+  destinationLabel        String                   @db.VarChar(180)
+  preference              TransitJourneyPreference @default(BALANCED)
+  status                  TransitJourneyStatus     @default(PLANNED)
+  totalFareMinKobo        Int?
+  totalFareMaxKobo        Int?
+  totalDurationMinMinutes Int?
+  totalDurationMaxMinutes Int?
+  transferCount           Int                      @default(0)
+  walkingDistanceM        Int                      @default(0)
+  plannedAt               DateTime                 @db.Timestamptz(3)
+  startedAt               DateTime?                @db.Timestamptz(3)
+  completedAt             DateTime?                @db.Timestamptz(3)
+  expiresAt               DateTime?                @db.Timestamptz(3)
+  createdAt               DateTime                 @default(now()) @db.Timestamptz(3)
+  updatedAt               DateTime                 @updatedAt @db.Timestamptz(3)
+  deletedAt               DateTime?                @db.Timestamptz(3)
+
+  user             User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  originPlace      TransitPlace?            @relation("SavedJourneyOrigin", fields: [originPlaceId], references: [id], onDelete: SetNull)
+  destinationPlace TransitPlace?            @relation("SavedJourneyDestination", fields: [destinationPlaceId], references: [id], onDelete: SetNull)
+  legs             SavedTransitJourneyLeg[]
+
+  @@index([userId, status, plannedAt(sort: Desc), deletedAt])
+  @@index([originPlaceId, destinationPlaceId])
+  @@index([expiresAt, status])
+  @@map("saved_transit_journeys")
+}
+
+model SavedTransitJourneyLeg {
+  id                 String      @id @default(uuid()) @db.Uuid
+  journeyId          String      @db.Uuid
+  routeId            String?     @db.Uuid
+  fromPlaceId        String?     @db.Uuid
+  toPlaceId          String?     @db.Uuid
+  legOrder           Int
+  mode               TransitMode
+  fromLabel          String      @db.VarChar(180)
+  toLabel            String      @db.VarChar(180)
+  destinationSign    String?     @db.VarChar(180)
+  instructions       String      @db.Text
+  fareMinKobo        Int?
+  fareMaxKobo        Int?
+  durationMinMinutes Int?
+  durationMaxMinutes Int?
+  distanceM          Int?
+  routeDataVersion   Int?
+  createdAt          DateTime    @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime    @updatedAt @db.Timestamptz(3)
+  deletedAt          DateTime?   @db.Timestamptz(3)
+
+  journey   SavedTransitJourney @relation(fields: [journeyId], references: [id], onDelete: Cascade)
+  route     TransitRoute?       @relation(fields: [routeId], references: [id], onDelete: SetNull)
+  fromPlace TransitPlace?       @relation("SavedJourneyLegFrom", fields: [fromPlaceId], references: [id], onDelete: SetNull)
+  toPlace   TransitPlace?       @relation("SavedJourneyLegTo", fields: [toPlaceId], references: [id], onDelete: SetNull)
+
+  @@unique([journeyId, legOrder])
+  @@index([routeId, routeDataVersion])
+  @@index([fromPlaceId, toPlaceId])
+  @@index([journeyId, deletedAt])
+  @@map("saved_transit_journey_legs")
 }
