@@ -944,3 +944,52 @@ enum TransitServiceDay {
   SATURDAY
   SUNDAY
 }
+
+model AdministrativeArea {
+  id             String                 @id @default(uuid()) @db.Uuid
+  parentId       String?                @db.Uuid
+  name           String                 @db.VarChar(120)
+  normalizedName String                 @db.VarChar(120)
+  slug           String                 @unique @db.VarChar(180)
+  code           String?                @unique @db.VarChar(40)
+  type           AdministrativeAreaType
+  countryCode    String                 @default("NG") @db.Char(2)
+  timezone       String                 @default("Africa/Lagos") @db.VarChar(64)
+  latitude       Decimal?               @db.Decimal(10, 7)
+  longitude      Decimal?               @db.Decimal(10, 7)
+  isActive       Boolean                @default(true)
+  createdAt      DateTime               @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime               @updatedAt @db.Timestamptz(3)
+  deletedAt      DateTime?              @db.Timestamptz(3)
+
+  parent   AdministrativeArea?  @relation("AdministrativeAreaHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
+  children AdministrativeArea[] @relation("AdministrativeAreaHierarchy")
+  coverage TransitCoverage?
+
+  @@unique([parentId, normalizedName, type])
+  @@index([parentId, type, deletedAt])
+  @@index([countryCode, type, isActive, deletedAt])
+  @@index([normalizedName])
+  @@map("administrative_areas")
+}
+
+model TransitCoverage {
+  id             String                @id @default(uuid()) @db.Uuid
+  areaId         String                @unique @db.Uuid
+  status         TransitCoverageStatus @default(COMING_SOON)
+  qualityScore   Int                   @default(0)
+  dataVersion    Int                   @default(1)
+  lastSurveyedAt DateTime?             @db.Timestamptz(3)
+  lastVerifiedAt DateTime?             @db.Timestamptz(3)
+  publishedAt    DateTime?             @db.Timestamptz(3)
+  notes          String?               @db.Text
+  createdAt      DateTime              @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime              @updatedAt @db.Timestamptz(3)
+  deletedAt      DateTime?             @db.Timestamptz(3)
+
+  area AdministrativeArea @relation(fields: [areaId], references: [id], onDelete: Cascade)
+
+  @@index([status, deletedAt])
+  @@index([qualityScore, status])
+  @@map("transit_coverages")
+}
