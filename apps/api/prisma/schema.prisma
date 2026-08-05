@@ -213,6 +213,8 @@ model User {
   sosAlerts               SosAlert[]              @relation("SosInitiator")
   sosRecipients           SosRecipient[]
   aiConversations         AiConversation[]
+  transitRoutesCreated    TransitRoute[]          @relation("TransitRouteCreator")
+  transitRoutesPublished  TransitRoute[]          @relation("TransitRoutePublisher")
 
   @@index([status, deletedAt])
   @@map("users")
@@ -967,6 +969,7 @@ model AdministrativeArea {
   coverage    TransitCoverage?
   dataSources TransitDataSource[]
   places      TransitPlace[]
+  routes      TransitRoute[]
 
   @@unique([parentId, normalizedName, type])
   @@index([parentId, type, deletedAt])
@@ -1015,6 +1018,7 @@ model TransitDataSource {
 
   area   AdministrativeArea? @relation(fields: [areaId], references: [id], onDelete: SetNull)
   places TransitPlace[]
+  routes TransitRoute[]
 
   @@index([areaId, type, deletedAt])
   @@index([isActive, reliabilityScore])
@@ -1044,10 +1048,13 @@ model TransitPlace {
   updatedAt                 DateTime            @updatedAt @db.Timestamptz(3)
   deletedAt                 DateTime?           @db.Timestamptz(3)
 
-  area    AdministrativeArea  @relation(fields: [areaId], references: [id], onDelete: Restrict)
-  source  TransitDataSource?  @relation(fields: [sourceId], references: [id], onDelete: SetNull)
-  aliases TransitPlaceAlias[]
-  modes   TransitPlaceMode[]
+  area              AdministrativeArea  @relation(fields: [areaId], references: [id], onDelete: Restrict)
+  source            TransitDataSource?  @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  aliases           TransitPlaceAlias[]
+  modes             TransitPlaceMode[]
+  originRoutes      TransitRoute[]      @relation("TransitRouteOrigin")
+  destinationRoutes TransitRoute[]      @relation("TransitRouteDestination")
+  routeStops        TransitRouteStop[]
 
   @@index([areaId, type, isActive, deletedAt])
   @@index([areaId, normalizedName, deletedAt])
@@ -1094,4 +1101,75 @@ model TransitPlaceMode {
   @@index([mode, boardingAllowed, deletedAt])
   @@index([placeId, deletedAt])
   @@map("transit_place_modes")
+}
+
+model TransitRoute {
+  id                 String             @id @default(uuid()) @db.Uuid
+  areaId             String             @db.Uuid
+  sourceId           String?            @db.Uuid
+  createdById        String             @db.Uuid
+  publishedById      String?            @db.Uuid
+  originPlaceId      String             @db.Uuid
+  destinationPlaceId String             @db.Uuid
+  code               String             @unique @db.VarChar(80)
+  name               String             @db.VarChar(180)
+  normalizedName     String             @db.VarChar(180)
+  scope              TransitRouteScope
+  mode               TransitMode
+  status             TransitRouteStatus @default(DRAFT)
+  direction          TransitDirection
+  destinationSign    String?            @db.VarChar(180)
+  operatorName       String?            @db.VarChar(180)
+  publicDescription  String?            @db.Text
+  boardingSummary    String?            @db.Text
+  durationMinMinutes Int?
+  durationMaxMinutes Int?
+  dataVersion        Int                @default(1)
+  submittedAt        DateTime?          @db.Timestamptz(3)
+  publishedAt        DateTime?          @db.Timestamptz(3)
+  retiredAt          DateTime?          @db.Timestamptz(3)
+  createdAt          DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime           @updatedAt @db.Timestamptz(3)
+  deletedAt          DateTime?          @db.Timestamptz(3)
+
+  area             AdministrativeArea @relation(fields: [areaId], references: [id], onDelete: Restrict)
+  source           TransitDataSource? @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  createdBy        User               @relation("TransitRouteCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  publishedBy      User?              @relation("TransitRoutePublisher", fields: [publishedById], references: [id], onDelete: SetNull)
+  originPlace      TransitPlace       @relation("TransitRouteOrigin", fields: [originPlaceId], references: [id], onDelete: Restrict)
+  destinationPlace TransitPlace       @relation("TransitRouteDestination", fields: [destinationPlaceId], references: [id], onDelete: Restrict)
+  stops            TransitRouteStop[]
+
+  @@index([areaId, status, mode, deletedAt])
+  @@index([originPlaceId, destinationPlaceId, status])
+  @@index([normalizedName])
+  @@index([createdById, status, updatedAt])
+  @@index([publishedAt, status])
+  @@map("transit_routes")
+}
+
+model TransitRouteStop {
+  id                    String    @id @default(uuid()) @db.Uuid
+  routeId               String    @db.Uuid
+  placeId               String    @db.Uuid
+  stopOrder             Int
+  platformName          String?   @db.VarChar(120)
+  pickupAllowed         Boolean   @default(true)
+  dropoffAllowed        Boolean   @default(true)
+  isTimingPoint         Boolean   @default(false)
+  boardingInstructions  String?   @db.Text
+  alightingInstructions String?   @db.Text
+  averageDwellSeconds   Int?
+  distanceFromStartM    Int?
+  createdAt             DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime  @updatedAt @db.Timestamptz(3)
+  deletedAt             DateTime? @db.Timestamptz(3)
+
+  route TransitRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  place TransitPlace @relation(fields: [placeId], references: [id], onDelete: Restrict)
+
+  @@unique([routeId, stopOrder])
+  @@index([placeId, routeId, deletedAt])
+  @@index([routeId, pickupAllowed, dropoffAllowed])
+  @@map("transit_route_stops")
 }
