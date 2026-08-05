@@ -225,6 +225,9 @@ model User {
   transitRoutesCreated    TransitRoute[]           @relation("TransitRouteCreator")
   transitRoutesPublished  TransitRoute[]           @relation("TransitRoutePublisher")
   transitFareObservations TransitFareObservation[] @relation("TransitFareRecorder")
+  transitRouteRevisions   TransitRouteRevision[]   @relation("TransitRevisionCreator")
+  transitRouteReviews     TransitRouteReview[]     @relation("TransitRouteReviewer")
+  transitImportJobs       TransitImportJob[]       @relation("TransitImportCreator")
 
   @@index([status, deletedAt])
   @@map("users")
@@ -980,6 +983,7 @@ model AdministrativeArea {
   dataSources TransitDataSource[]
   places      TransitPlace[]
   routes      TransitRoute[]
+  importJobs  TransitImportJob[]
 
   @@unique([parentId, normalizedName, type])
   @@index([parentId, type, deletedAt])
@@ -1030,6 +1034,7 @@ model TransitDataSource {
   places           TransitPlace[]
   routes           TransitRoute[]
   fareObservations TransitFareObservation[]
+  importJobs       TransitImportJob[]
 
   @@index([areaId, type, deletedAt])
   @@index([isActive, reliabilityScore])
@@ -1138,6 +1143,7 @@ model TransitRoute {
   durationMinMinutes Int?
   durationMaxMinutes Int?
   dataVersion        Int                @default(1)
+  currentRevisionId  String?            @unique @db.Uuid
   confidenceScore    Int                @default(0)
   lastVerifiedAt     DateTime?          @db.Timestamptz(3)
   submittedAt        DateTime?          @db.Timestamptz(3)
@@ -1157,6 +1163,8 @@ model TransitRoute {
   segments         TransitSegment[]
   serviceWindows   TransitServiceWindow[]
   fareObservations TransitFareObservation[]
+  currentRevision  TransitRouteRevision?    @relation("TransitRouteCurrentRevision", fields: [currentRevisionId], references: [id], onDelete: SetNull)
+  revisions        TransitRouteRevision[]   @relation("TransitRouteRevisionHistory")
 
   @@index([areaId, status, mode, deletedAt])
   @@index([originPlaceId, destinationPlaceId, status])
@@ -1275,4 +1283,79 @@ model TransitFareObservation {
   @@index([sourceId, observedAt(sort: Desc)])
   @@index([validUntil, confidenceScore])
   @@map("transit_fare_observations")
+}
+
+model TransitRouteRevision {
+  id            String    @id @default(uuid()) @db.Uuid
+  routeId       String    @db.Uuid
+  createdById   String    @db.Uuid
+  version       Int
+  snapshot      Json
+  checksum      String    @db.VarChar(128)
+  changeSummary String?   @db.Text
+  submittedAt   DateTime? @db.Timestamptz(3)
+  createdAt     DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime  @updatedAt @db.Timestamptz(3)
+  deletedAt     DateTime? @db.Timestamptz(3)
+
+  route           TransitRoute         @relation("TransitRouteRevisionHistory", fields: [routeId], references: [id], onDelete: Cascade)
+  createdBy       User                 @relation("TransitRevisionCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  reviews         TransitRouteReview[]
+  currentForRoute TransitRoute?        @relation("TransitRouteCurrentRevision")
+
+  @@unique([routeId, version])
+  @@index([routeId, createdAt(sort: Desc)])
+  @@index([createdById, submittedAt])
+  @@index([checksum])
+  @@map("transit_route_revisions")
+}
+
+model TransitRouteReview {
+  id         String              @id @default(uuid()) @db.Uuid
+  revisionId String              @db.Uuid
+  reviewerId String              @db.Uuid
+  status     TransitReviewStatus @default(PENDING)
+  notes      String?             @db.Text
+  reviewedAt DateTime?           @db.Timestamptz(3)
+  createdAt  DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime            @updatedAt @db.Timestamptz(3)
+  deletedAt  DateTime?           @db.Timestamptz(3)
+
+  revision TransitRouteRevision @relation(fields: [revisionId], references: [id], onDelete: Cascade)
+  reviewer User                 @relation("TransitRouteReviewer", fields: [reviewerId], references: [id], onDelete: Restrict)
+
+  @@unique([revisionId, reviewerId])
+  @@index([reviewerId, status, createdAt])
+  @@index([revisionId, status, deletedAt])
+  @@map("transit_route_reviews")
+}
+
+model TransitImportJob {
+  id               String              @id @default(uuid()) @db.Uuid
+  areaId           String              @db.Uuid
+  sourceId         String?             @db.Uuid
+  createdById      String              @db.Uuid
+  status           TransitImportStatus @default(UPLOADED)
+  originalFileName String              @db.VarChar(255)
+  fileKey          String              @db.VarChar(512)
+  checksum         String              @db.VarChar(128)
+  totalRows        Int                 @default(0)
+  validRows        Int                 @default(0)
+  invalidRows      Int                 @default(0)
+  importedRows     Int                 @default(0)
+  errorReportKey   String?             @db.VarChar(512)
+  startedAt        DateTime?           @db.Timestamptz(3)
+  completedAt      DateTime?           @db.Timestamptz(3)
+  createdAt        DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime            @updatedAt @db.Timestamptz(3)
+  deletedAt        DateTime?           @db.Timestamptz(3)
+
+  area      AdministrativeArea @relation(fields: [areaId], references: [id], onDelete: Restrict)
+  source    TransitDataSource? @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  createdBy User               @relation("TransitImportCreator", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([areaId, status, createdAt(sort: Desc)])
+  @@index([createdById, status])
+  @@index([checksum])
+  @@map("transit_import_jobs")
 }
