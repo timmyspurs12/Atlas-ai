@@ -13,6 +13,8 @@ enum UserRole {
   BUSINESS_ADMIN
   DISPATCHER
   SECURITY_OPERATOR
+  TRANSIT_EDITOR
+  TRANSIT_REVIEWER
   SUPER_ADMIN
 }
 
@@ -165,73 +167,73 @@ enum AiRole {
 }
 
 model User {
-  id                 String     @id @default(uuid()) @db.Uuid
-  email              String?    @unique @db.VarChar(320)
-  phone              String?    @unique @db.VarChar(32)
-  passwordHash       String?    @db.VarChar(255)
-  role               UserRole   @default(USER)
-  status             UserStatus @default(ACTIVE)
-  emailVerifiedAt    DateTime?   @db.Timestamptz(3)
-  phoneVerifiedAt    DateTime?   @db.Timestamptz(3)
-  lastSeenAt         DateTime?   @db.Timestamptz(3)
-  termsVersion       String      @db.VarChar(20)
-  termsAcceptedAt    DateTime    @db.Timestamptz(3)
+  id                  String     @id @default(uuid()) @db.Uuid
+  email               String?    @unique @db.VarChar(320)
+  phone               String?    @unique @db.VarChar(32)
+  passwordHash        String?    @db.VarChar(255)
+  role                UserRole   @default(USER)
+  status              UserStatus @default(ACTIVE)
+  emailVerifiedAt     DateTime?  @db.Timestamptz(3)
+  phoneVerifiedAt     DateTime?  @db.Timestamptz(3)
+  lastSeenAt          DateTime?  @db.Timestamptz(3)
+  termsVersion        String     @db.VarChar(20)
+  termsAcceptedAt     DateTime   @db.Timestamptz(3)
   deletionScheduledAt DateTime?  @db.Timestamptz(3)
-  createdAt          DateTime    @default(now()) @db.Timestamptz(3)
-  updatedAt          DateTime    @updatedAt @db.Timestamptz(3)
-  deletedAt          DateTime?   @db.Timestamptz(3)
+  createdAt           DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime   @updatedAt @db.Timestamptz(3)
+  deletedAt           DateTime?  @db.Timestamptz(3)
 
-  profile                  Profile?
-  sentFriendRequests       Friendship[]        @relation("FriendshipRequester")
-  receivedFriendRequests   Friendship[]        @relation("FriendshipAddressee")
-  blocksInitiated          UserBlock[]          @relation("Blocker")
-  blocksReceived           UserBlock[]          @relation("BlockedUser")
-  locationSharesOwned      LocationShare[]      @relation("ShareOwner")
-  locationSharesReceived   LocationShare[]      @relation("ShareRecipient")
-  locationSharesRevoked    LocationShare[]      @relation("ShareRevoker")
-  liveLocation             LiveLocation?
-  trips                    Trip[]
-  messages                 Message[]            @relation("MessageSender")
-  messageReceipts          MessageReceipt[]
-  conversationMemberships  ConversationMember[]
-  conversationsCreated     Conversation[]       @relation("ConversationCreator")
-  notifications            Notification[]       @relation("NotificationRecipient")
-  notificationPreference   NotificationPreference?
-  notificationsActed       Notification[]       @relation("NotificationActor")
-  emergencyContactsOwned   EmergencyContact[]   @relation("EmergencyOwner")
-  emergencyContactFor      EmergencyContact[]   @relation("EmergencyContactUser")
-  geofencesOwned           Geofence[]           @relation("GeofenceOwner")
-  geofencesAsSubject       Geofence[]           @relation("GeofenceSubject")
-  devices                  Device[]
-  sessions                 Session[]
-  subscriptions            Subscription[]
-  auditLogs                AuditLog[]            @relation("AuditActor")
-  verificationChallenges   VerificationChallenge[]
-  authIdentities           AuthIdentity[]
-  sosAlerts                SosAlert[]            @relation("SosInitiator")
-  sosRecipients            SosRecipient[]
-  aiConversations          AiConversation[]
+  profile                 Profile?
+  sentFriendRequests      Friendship[]            @relation("FriendshipRequester")
+  receivedFriendRequests  Friendship[]            @relation("FriendshipAddressee")
+  blocksInitiated         UserBlock[]             @relation("Blocker")
+  blocksReceived          UserBlock[]             @relation("BlockedUser")
+  locationSharesOwned     LocationShare[]         @relation("ShareOwner")
+  locationSharesReceived  LocationShare[]         @relation("ShareRecipient")
+  locationSharesRevoked   LocationShare[]         @relation("ShareRevoker")
+  liveLocation            LiveLocation?
+  trips                   Trip[]
+  messages                Message[]               @relation("MessageSender")
+  messageReceipts         MessageReceipt[]
+  conversationMemberships ConversationMember[]
+  conversationsCreated    Conversation[]          @relation("ConversationCreator")
+  notifications           Notification[]          @relation("NotificationRecipient")
+  notificationPreference  NotificationPreference?
+  notificationsActed      Notification[]          @relation("NotificationActor")
+  emergencyContactsOwned  EmergencyContact[]      @relation("EmergencyOwner")
+  emergencyContactFor     EmergencyContact[]      @relation("EmergencyContactUser")
+  geofencesOwned          Geofence[]              @relation("GeofenceOwner")
+  geofencesAsSubject      Geofence[]              @relation("GeofenceSubject")
+  devices                 Device[]
+  sessions                Session[]
+  subscriptions           Subscription[]
+  auditLogs               AuditLog[]              @relation("AuditActor")
+  verificationChallenges  VerificationChallenge[]
+  authIdentities          AuthIdentity[]
+  sosAlerts               SosAlert[]              @relation("SosInitiator")
+  sosRecipients           SosRecipient[]
+  aiConversations         AiConversation[]
 
   @@index([status, deletedAt])
   @@map("users")
 }
 
 model Profile {
-  id                      String   @id @default(uuid()) @db.Uuid
-  userId                  String   @unique @db.Uuid
-  displayName             String   @db.VarChar(60)
-  handle                  String?  @unique @db.VarChar(30)
-  avatarUrl               String?  @db.VarChar(2048)
-  bio                     String?  @db.VarChar(240)
-  timezone                String   @default("UTC") @db.VarChar(64)
-  locale                  String   @default("en") @db.VarChar(16)
-  isDiscoverable          Boolean  @default(true)
-  showOnlineStatus        Boolean  @default(true)
-  defaultSharePrecision   LocationPrecision @default(PRECISE)
-  analyticsConsentAt      DateTime? @db.Timestamptz(3)
-  createdAt               DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt               DateTime @updatedAt @db.Timestamptz(3)
-  deletedAt               DateTime? @db.Timestamptz(3)
+  id                    String            @id @default(uuid()) @db.Uuid
+  userId                String            @unique @db.Uuid
+  displayName           String            @db.VarChar(60)
+  handle                String?           @unique @db.VarChar(30)
+  avatarUrl             String?           @db.VarChar(2048)
+  bio                   String?           @db.VarChar(240)
+  timezone              String            @default("UTC") @db.VarChar(64)
+  locale                String            @default("en") @db.VarChar(16)
+  isDiscoverable        Boolean           @default(true)
+  showOnlineStatus      Boolean           @default(true)
+  defaultSharePrecision LocationPrecision @default(PRECISE)
+  analyticsConsentAt    DateTime?         @db.Timestamptz(3)
+  createdAt             DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime          @updatedAt @db.Timestamptz(3)
+  deletedAt             DateTime?         @db.Timestamptz(3)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -241,15 +243,15 @@ model Profile {
 }
 
 model Friendship {
-  id           String           @id @default(uuid()) @db.Uuid
-  requesterId  String           @db.Uuid
-  addresseeId  String           @db.Uuid
-  pairKey      String           @unique @db.VarChar(73)
-  status       FriendshipStatus @default(PENDING)
-  respondedAt  DateTime?        @db.Timestamptz(3)
-  createdAt    DateTime         @default(now()) @db.Timestamptz(3)
-  updatedAt    DateTime         @updatedAt @db.Timestamptz(3)
-  deletedAt    DateTime?        @db.Timestamptz(3)
+  id          String           @id @default(uuid()) @db.Uuid
+  requesterId String           @db.Uuid
+  addresseeId String           @db.Uuid
+  pairKey     String           @unique @db.VarChar(73)
+  status      FriendshipStatus @default(PENDING)
+  respondedAt DateTime?        @db.Timestamptz(3)
+  createdAt   DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime         @updatedAt @db.Timestamptz(3)
+  deletedAt   DateTime?        @db.Timestamptz(3)
 
   requester User @relation("FriendshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
   addressee User @relation("FriendshipAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
@@ -261,12 +263,12 @@ model Friendship {
 }
 
 model UserBlock {
-  id            String   @id @default(uuid()) @db.Uuid
-  blockerId     String   @db.Uuid
-  blockedUserId String   @db.Uuid
-  reason        String?  @db.VarChar(200)
-  createdAt     DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt     DateTime @updatedAt @db.Timestamptz(3)
+  id            String    @id @default(uuid()) @db.Uuid
+  blockerId     String    @db.Uuid
+  blockedUserId String    @db.Uuid
+  reason        String?   @db.VarChar(200)
+  createdAt     DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime  @updatedAt @db.Timestamptz(3)
   deletedAt     DateTime? @db.Timestamptz(3)
 
   blocker     User @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
@@ -278,23 +280,23 @@ model UserBlock {
 }
 
 model LocationShare {
-  id             String              @id @default(uuid()) @db.Uuid
-  ownerId        String              @db.Uuid
-  recipientId    String              @db.Uuid
-  revokedById    String?             @db.Uuid
-  status         LocationShareStatus @default(ACTIVE)
-  precision      LocationPrecision   @default(PRECISE)
-  shareBattery   Boolean             @default(true)
-  shareSpeed     Boolean             @default(true)
-  allowGeofences Boolean             @default(false)
-  startsAt       DateTime            @db.Timestamptz(3)
-  expiresAt      DateTime            @db.Timestamptz(3)
-  endedAt        DateTime?           @db.Timestamptz(3)
-  lastBroadcastAt DateTime?          @db.Timestamptz(3)
-  version        Int                 @default(1)
-  createdAt      DateTime            @default(now()) @db.Timestamptz(3)
-  updatedAt      DateTime            @updatedAt @db.Timestamptz(3)
-  deletedAt      DateTime?           @db.Timestamptz(3)
+  id              String              @id @default(uuid()) @db.Uuid
+  ownerId         String              @db.Uuid
+  recipientId     String              @db.Uuid
+  revokedById     String?             @db.Uuid
+  status          LocationShareStatus @default(ACTIVE)
+  precision       LocationPrecision   @default(PRECISE)
+  shareBattery    Boolean             @default(true)
+  shareSpeed      Boolean             @default(true)
+  allowGeofences  Boolean             @default(false)
+  startsAt        DateTime            @db.Timestamptz(3)
+  expiresAt       DateTime            @db.Timestamptz(3)
+  endedAt         DateTime?           @db.Timestamptz(3)
+  lastBroadcastAt DateTime?           @db.Timestamptz(3)
+  version         Int                 @default(1)
+  createdAt       DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime            @updatedAt @db.Timestamptz(3)
+  deletedAt       DateTime?           @db.Timestamptz(3)
 
   owner     User  @relation("ShareOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   recipient User  @relation("ShareRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
@@ -306,22 +308,22 @@ model LocationShare {
 }
 
 model LiveLocation {
-  id             String   @id @default(uuid()) @db.Uuid
-  userId         String   @unique @db.Uuid
-  sourceDeviceId String?  @db.Uuid
-  latitude       Decimal  @db.Decimal(10, 7)
-  longitude      Decimal  @db.Decimal(10, 7)
-  altitudeM      Decimal? @db.Decimal(8, 2)
-  accuracyM      Decimal  @db.Decimal(8, 2)
-  headingDeg     Decimal? @db.Decimal(6, 2)
-  speedMps       Decimal? @db.Decimal(7, 2)
+  id             String    @id @default(uuid()) @db.Uuid
+  userId         String    @unique @db.Uuid
+  sourceDeviceId String?   @db.Uuid
+  latitude       Decimal   @db.Decimal(10, 7)
+  longitude      Decimal   @db.Decimal(10, 7)
+  altitudeM      Decimal?  @db.Decimal(8, 2)
+  accuracyM      Decimal   @db.Decimal(8, 2)
+  headingDeg     Decimal?  @db.Decimal(6, 2)
+  speedMps       Decimal?  @db.Decimal(7, 2)
   batteryPct     Int?
   isCharging     Boolean?
-  isMocked       Boolean  @default(false)
+  isMocked       Boolean   @default(false)
   sequence       BigInt
-  recordedAt     DateTime @db.Timestamptz(3)
-  createdAt      DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt      DateTime @updatedAt @db.Timestamptz(3)
+  recordedAt     DateTime  @db.Timestamptz(3)
+  createdAt      DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @db.Timestamptz(3)
   deletedAt      DateTime? @db.Timestamptz(3)
 
   user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -333,25 +335,25 @@ model LiveLocation {
 }
 
 model Trip {
-  id                String     @id @default(uuid()) @db.Uuid
-  userId            String     @db.Uuid
-  status            TripStatus @default(ACTIVE)
-  source            TripSource @default(AUTOMATIC)
-  title             String?    @db.VarChar(120)
-  startedAt         DateTime   @db.Timestamptz(3)
-  endedAt           DateTime?  @db.Timestamptz(3)
-  startLabel        String?    @db.VarChar(200)
-  endLabel          String?    @db.VarChar(200)
-  distanceM         Int        @default(0)
-  durationSeconds   Int        @default(0)
-  averageSpeedMps   Decimal?   @db.Decimal(7, 2)
-  maxSpeedMps       Decimal?   @db.Decimal(7, 2)
-  carbonEstimateG   Int?
-  aiSummary         String?    @db.Text
-  summaryGeneratedAt DateTime? @db.Timestamptz(3)
-  createdAt         DateTime   @default(now()) @db.Timestamptz(3)
-  updatedAt         DateTime   @updatedAt @db.Timestamptz(3)
-  deletedAt         DateTime?  @db.Timestamptz(3)
+  id                 String     @id @default(uuid()) @db.Uuid
+  userId             String     @db.Uuid
+  status             TripStatus @default(ACTIVE)
+  source             TripSource @default(AUTOMATIC)
+  title              String?    @db.VarChar(120)
+  startedAt          DateTime   @db.Timestamptz(3)
+  endedAt            DateTime?  @db.Timestamptz(3)
+  startLabel         String?    @db.VarChar(200)
+  endLabel           String?    @db.VarChar(200)
+  distanceM          Int        @default(0)
+  durationSeconds    Int        @default(0)
+  averageSpeedMps    Decimal?   @db.Decimal(7, 2)
+  maxSpeedMps        Decimal?   @db.Decimal(7, 2)
+  carbonEstimateG    Int?
+  aiSummary          String?    @db.Text
+  summaryGeneratedAt DateTime?  @db.Timestamptz(3)
+  createdAt          DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime   @updatedAt @db.Timestamptz(3)
+  deletedAt          DateTime?  @db.Timestamptz(3)
 
   user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   points TripPoint[]
@@ -362,19 +364,19 @@ model Trip {
 }
 
 model TripPoint {
-  id             String   @id @default(uuid()) @db.Uuid
-  tripId         String   @db.Uuid
-  sourceDeviceId String?  @db.Uuid
-  latitude       Decimal  @db.Decimal(10, 7)
-  longitude      Decimal  @db.Decimal(10, 7)
-  altitudeM      Decimal? @db.Decimal(8, 2)
-  accuracyM      Decimal  @db.Decimal(8, 2)
-  headingDeg     Decimal? @db.Decimal(6, 2)
-  speedMps       Decimal? @db.Decimal(7, 2)
+  id             String    @id @default(uuid()) @db.Uuid
+  tripId         String    @db.Uuid
+  sourceDeviceId String?   @db.Uuid
+  latitude       Decimal   @db.Decimal(10, 7)
+  longitude      Decimal   @db.Decimal(10, 7)
+  altitudeM      Decimal?  @db.Decimal(8, 2)
+  accuracyM      Decimal   @db.Decimal(8, 2)
+  headingDeg     Decimal?  @db.Decimal(6, 2)
+  speedMps       Decimal?  @db.Decimal(7, 2)
   sequence       Int
-  recordedAt     DateTime @db.Timestamptz(3)
-  createdAt      DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt      DateTime @updatedAt @db.Timestamptz(3)
+  recordedAt     DateTime  @db.Timestamptz(3)
+  createdAt      DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @db.Timestamptz(3)
   deletedAt      DateTime? @db.Timestamptz(3)
 
   trip         Trip    @relation(fields: [tripId], references: [id], onDelete: Cascade)
@@ -386,15 +388,15 @@ model TripPoint {
 }
 
 model Conversation {
-  id          String           @id @default(uuid()) @db.Uuid
+  id            String           @id @default(uuid()) @db.Uuid
   type          ConversationType @default(DIRECT)
   directPairKey String?          @unique @db.VarChar(73)
   createdById   String?          @db.Uuid
-  title       String?          @db.VarChar(100)
-  avatarUrl   String?          @db.VarChar(2048)
-  createdAt   DateTime         @default(now()) @db.Timestamptz(3)
-  updatedAt   DateTime         @updatedAt @db.Timestamptz(3)
-  deletedAt   DateTime?        @db.Timestamptz(3)
+  title         String?          @db.VarChar(100)
+  avatarUrl     String?          @db.VarChar(2048)
+  createdAt     DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime         @updatedAt @db.Timestamptz(3)
+  deletedAt     DateTime?        @db.Timestamptz(3)
 
   createdBy User?                @relation("ConversationCreator", fields: [createdById], references: [id], onDelete: SetNull)
   members   ConversationMember[]
@@ -405,14 +407,14 @@ model Conversation {
 }
 
 model ConversationMember {
-  id             String   @id @default(uuid()) @db.Uuid
-  conversationId String   @db.Uuid
-  userId         String   @db.Uuid
-  joinedAt       DateTime @db.Timestamptz(3)
+  id             String    @id @default(uuid()) @db.Uuid
+  conversationId String    @db.Uuid
+  userId         String    @db.Uuid
+  joinedAt       DateTime  @db.Timestamptz(3)
   mutedUntil     DateTime? @db.Timestamptz(3)
   lastReadAt     DateTime? @db.Timestamptz(3)
-  createdAt      DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt      DateTime @updatedAt @db.Timestamptz(3)
+  createdAt      DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @db.Timestamptz(3)
   deletedAt      DateTime? @db.Timestamptz(3)
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
@@ -428,7 +430,7 @@ model Message {
   conversationId       String      @db.Uuid
   senderId             String      @db.Uuid
   clientMessageId      String      @db.Uuid
-  type                  MessageType @default(TEXT)
+  type                 MessageType @default(TEXT)
   bodyCiphertext       Bytes?
   bodyPreview          String?     @db.VarChar(160)
   encryptionKeyVersion Int         @default(1)
@@ -452,18 +454,18 @@ model Message {
 }
 
 model MessageAttachment {
-  id           String   @id @default(uuid()) @db.Uuid
-  messageId    String   @db.Uuid
-  storageKey   String   @db.VarChar(512)
-  mimeType     String   @db.VarChar(100)
-  sizeBytes    Int
-  durationMs   Int?
-  width        Int?
-  height       Int?
-  checksum     String   @db.VarChar(128)
-  createdAt    DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt    DateTime @updatedAt @db.Timestamptz(3)
-  deletedAt    DateTime? @db.Timestamptz(3)
+  id         String    @id @default(uuid()) @db.Uuid
+  messageId  String    @db.Uuid
+  storageKey String    @db.VarChar(512)
+  mimeType   String    @db.VarChar(100)
+  sizeBytes  Int
+  durationMs Int?
+  width      Int?
+  height     Int?
+  checksum   String    @db.VarChar(128)
+  createdAt  DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime  @updatedAt @db.Timestamptz(3)
+  deletedAt  DateTime? @db.Timestamptz(3)
 
   message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
@@ -472,14 +474,14 @@ model MessageAttachment {
 }
 
 model MessageReceipt {
-  id        String               @id @default(uuid()) @db.Uuid
-  messageId String               @db.Uuid
-  userId    String               @db.Uuid
-  status    MessageReceiptStatus
-  occurredAt DateTime            @db.Timestamptz(3)
-  createdAt DateTime             @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime             @updatedAt @db.Timestamptz(3)
-  deletedAt DateTime?            @db.Timestamptz(3)
+  id         String               @id @default(uuid()) @db.Uuid
+  messageId  String               @db.Uuid
+  userId     String               @db.Uuid
+  status     MessageReceiptStatus
+  occurredAt DateTime             @db.Timestamptz(3)
+  createdAt  DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime             @updatedAt @db.Timestamptz(3)
+  deletedAt  DateTime?            @db.Timestamptz(3)
 
   message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -490,19 +492,19 @@ model MessageReceipt {
 }
 
 model Notification {
-  id         String              @id @default(uuid()) @db.Uuid
-  userId     String              @db.Uuid
-  actorId    String?             @db.Uuid
-  type       NotificationType
-  channel    NotificationChannel @default(IN_APP)
-  title      String              @db.VarChar(120)
-  body       String              @db.VarChar(500)
-  data       Json?
-  readAt     DateTime?           @db.Timestamptz(3)
-  deliveredAt DateTime?          @db.Timestamptz(3)
-  createdAt  DateTime            @default(now()) @db.Timestamptz(3)
-  updatedAt  DateTime            @updatedAt @db.Timestamptz(3)
-  deletedAt  DateTime?           @db.Timestamptz(3)
+  id          String              @id @default(uuid()) @db.Uuid
+  userId      String              @db.Uuid
+  actorId     String?             @db.Uuid
+  type        NotificationType
+  channel     NotificationChannel @default(IN_APP)
+  title       String              @db.VarChar(120)
+  body        String              @db.VarChar(500)
+  data        Json?
+  readAt      DateTime?           @db.Timestamptz(3)
+  deliveredAt DateTime?           @db.Timestamptz(3)
+  createdAt   DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime            @updatedAt @db.Timestamptz(3)
+  deletedAt   DateTime?           @db.Timestamptz(3)
 
   user  User  @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
   actor User? @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
@@ -512,20 +514,20 @@ model Notification {
 }
 
 model NotificationPreference {
-  id                   String   @id @default(uuid()) @db.Uuid
-  userId               String   @unique @db.Uuid
-  pushEnabled          Boolean  @default(true)
-  friendRequests       Boolean  @default(true)
-  locationSharing      Boolean  @default(true)
-  geofenceAlerts       Boolean  @default(true)
-  chatMessages         Boolean  @default(true)
-  sosAlerts            Boolean  @default(true)
-  weeklyReports        Boolean  @default(true)
-  productUpdates       Boolean  @default(false)
-  quietHours           Json?
-  createdAt            DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt            DateTime @updatedAt @db.Timestamptz(3)
-  deletedAt            DateTime? @db.Timestamptz(3)
+  id              String    @id @default(uuid()) @db.Uuid
+  userId          String    @unique @db.Uuid
+  pushEnabled     Boolean   @default(true)
+  friendRequests  Boolean   @default(true)
+  locationSharing Boolean   @default(true)
+  geofenceAlerts  Boolean   @default(true)
+  chatMessages    Boolean   @default(true)
+  sosAlerts       Boolean   @default(true)
+  weeklyReports   Boolean   @default(true)
+  productUpdates  Boolean   @default(false)
+  quietHours      Json?
+  createdAt       DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @db.Timestamptz(3)
+  deletedAt       DateTime? @db.Timestamptz(3)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -534,21 +536,21 @@ model NotificationPreference {
 }
 
 model EmergencyContact {
-  id            String   @id @default(uuid()) @db.Uuid
-  ownerId       String   @db.Uuid
-  contactUserId String?  @db.Uuid
-  name          String   @db.VarChar(80)
-  phone         String?  @db.VarChar(32)
-  email         String?  @db.VarChar(320)
-  relationship  String?  @db.VarChar(40)
-  isVerified    Boolean  @default(false)
+  id            String    @id @default(uuid()) @db.Uuid
+  ownerId       String    @db.Uuid
+  contactUserId String?   @db.Uuid
+  name          String    @db.VarChar(80)
+  phone         String?   @db.VarChar(32)
+  email         String?   @db.VarChar(320)
+  relationship  String?   @db.VarChar(40)
+  isVerified    Boolean   @default(false)
   verifiedAt    DateTime? @db.Timestamptz(3)
-  priority      Int      @default(0)
-  notifyPush    Boolean  @default(true)
-  notifySms     Boolean  @default(false)
-  notifyEmail   Boolean  @default(false)
-  createdAt     DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt     DateTime @updatedAt @db.Timestamptz(3)
+  priority      Int       @default(0)
+  notifyPush    Boolean   @default(true)
+  notifySms     Boolean   @default(false)
+  notifyEmail   Boolean   @default(false)
+  createdAt     DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime  @updatedAt @db.Timestamptz(3)
   deletedAt     DateTime? @db.Timestamptz(3)
 
   owner       User  @relation("EmergencyOwner", fields: [ownerId], references: [id], onDelete: Cascade)
@@ -575,7 +577,7 @@ model SosAlert {
   updatedAt       DateTime        @updatedAt @db.Timestamptz(3)
   deletedAt       DateTime?       @db.Timestamptz(3)
 
-  initiator User           @relation("SosInitiator", fields: [initiatorId], references: [id], onDelete: Cascade)
+  initiator  User           @relation("SosInitiator", fields: [initiatorId], references: [id], onDelete: Cascade)
   recipients SosRecipient[]
 
   @@index([initiatorId, status, createdAt(sort: Desc)])
@@ -583,16 +585,16 @@ model SosAlert {
 }
 
 model SosRecipient {
-  id                 String   @id @default(uuid()) @db.Uuid
-  sosAlertId         String   @db.Uuid
-  userId             String?  @db.Uuid
-  destination        String?  @db.VarChar(320)
-  channels           Json
-  deliveryState      Json?
-  acknowledgedAt     DateTime? @db.Timestamptz(3)
-  createdAt          DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt          DateTime @updatedAt @db.Timestamptz(3)
-  deletedAt          DateTime? @db.Timestamptz(3)
+  id             String    @id @default(uuid()) @db.Uuid
+  sosAlertId     String    @db.Uuid
+  userId         String?   @db.Uuid
+  destination    String?   @db.VarChar(320)
+  channels       Json
+  deliveryState  Json?
+  acknowledgedAt DateTime? @db.Timestamptz(3)
+  createdAt      DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @db.Timestamptz(3)
+  deletedAt      DateTime? @db.Timestamptz(3)
 
   alert SosAlert @relation(fields: [sosAlertId], references: [id], onDelete: Cascade)
   user  User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
@@ -603,24 +605,24 @@ model SosRecipient {
 }
 
 model Geofence {
-  id             String        @id @default(uuid()) @db.Uuid
-  ownerId        String        @db.Uuid
-  subjectUserId  String        @db.Uuid
-  type           GeofenceType  @default(CUSTOM)
-  name           String        @db.VarChar(80)
-  latitude       Decimal       @db.Decimal(10, 7)
-  longitude      Decimal       @db.Decimal(10, 7)
-  radiusM        Int
-  notifyOnArrival Boolean      @default(true)
-  notifyOnDeparture Boolean    @default(true)
-  isEnabled      Boolean       @default(true)
-  schedule       Json?
-  createdAt      DateTime      @default(now()) @db.Timestamptz(3)
-  updatedAt      DateTime      @updatedAt @db.Timestamptz(3)
-  deletedAt      DateTime?     @db.Timestamptz(3)
+  id                String       @id @default(uuid()) @db.Uuid
+  ownerId           String       @db.Uuid
+  subjectUserId     String       @db.Uuid
+  type              GeofenceType @default(CUSTOM)
+  name              String       @db.VarChar(80)
+  latitude          Decimal      @db.Decimal(10, 7)
+  longitude         Decimal      @db.Decimal(10, 7)
+  radiusM           Int
+  notifyOnArrival   Boolean      @default(true)
+  notifyOnDeparture Boolean      @default(true)
+  isEnabled         Boolean      @default(true)
+  schedule          Json?
+  createdAt         DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime     @updatedAt @db.Timestamptz(3)
+  deletedAt         DateTime?    @db.Timestamptz(3)
 
-  owner       User             @relation("GeofenceOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  subjectUser User             @relation("GeofenceSubject", fields: [subjectUserId], references: [id], onDelete: Cascade)
+  owner       User            @relation("GeofenceOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  subjectUser User            @relation("GeofenceSubject", fields: [subjectUserId], references: [id], onDelete: Cascade)
   events      GeofenceEvent[]
   state       GeofenceState?
 
@@ -630,15 +632,15 @@ model Geofence {
 }
 
 model GeofenceEvent {
-  id          String             @id @default(uuid()) @db.Uuid
-  geofenceId  String             @db.Uuid
-  type        GeofenceEventType
-  latitude    Decimal            @db.Decimal(10, 7)
-  longitude   Decimal            @db.Decimal(10, 7)
-  occurredAt  DateTime           @db.Timestamptz(3)
-  createdAt   DateTime           @default(now()) @db.Timestamptz(3)
-  updatedAt   DateTime           @updatedAt @db.Timestamptz(3)
-  deletedAt   DateTime?          @db.Timestamptz(3)
+  id         String            @id @default(uuid()) @db.Uuid
+  geofenceId String            @db.Uuid
+  type       GeofenceEventType
+  latitude   Decimal           @db.Decimal(10, 7)
+  longitude  Decimal           @db.Decimal(10, 7)
+  occurredAt DateTime          @db.Timestamptz(3)
+  createdAt  DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime          @updatedAt @db.Timestamptz(3)
+  deletedAt  DateTime?         @db.Timestamptz(3)
 
   geofence Geofence @relation(fields: [geofenceId], references: [id], onDelete: Cascade)
 
@@ -647,12 +649,12 @@ model GeofenceEvent {
 }
 
 model GeofenceState {
-  id          String   @id @default(uuid()) @db.Uuid
-  geofenceId  String   @unique @db.Uuid
+  id          String    @id @default(uuid()) @db.Uuid
+  geofenceId  String    @unique @db.Uuid
   isInside    Boolean
-  evaluatedAt DateTime @db.Timestamptz(3)
-  createdAt   DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+  evaluatedAt DateTime  @db.Timestamptz(3)
+  createdAt   DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @db.Timestamptz(3)
   deletedAt   DateTime? @db.Timestamptz(3)
 
   geofence Geofence @relation(fields: [geofenceId], references: [id], onDelete: Cascade)
@@ -689,23 +691,23 @@ model Device {
 }
 
 model Session {
-  id               String        @id @default(uuid()) @db.Uuid
-  userId           String        @db.Uuid
-  deviceId         String        @db.Uuid
-  status           SessionStatus @default(ACTIVE)
+  id                       String        @id @default(uuid()) @db.Uuid
+  userId                   String        @db.Uuid
+  deviceId                 String        @db.Uuid
+  status                   SessionStatus @default(ACTIVE)
   refreshTokenHash         String        @db.VarChar(128)
   previousRefreshTokenHash String?       @db.VarChar(128)
-  tokenFamily             String        @db.Uuid
-  generation       Int           @default(1)
-  ipHash           String?       @db.VarChar(128)
-  userAgent        String?       @db.VarChar(512)
-  lastUsedAt       DateTime      @db.Timestamptz(3)
-  expiresAt        DateTime      @db.Timestamptz(3)
-  revokedAt        DateTime?     @db.Timestamptz(3)
-  revokeReason     String?       @db.VarChar(100)
-  createdAt        DateTime      @default(now()) @db.Timestamptz(3)
-  updatedAt        DateTime      @updatedAt @db.Timestamptz(3)
-  deletedAt        DateTime?     @db.Timestamptz(3)
+  tokenFamily              String        @db.Uuid
+  generation               Int           @default(1)
+  ipHash                   String?       @db.VarChar(128)
+  userAgent                String?       @db.VarChar(512)
+  lastUsedAt               DateTime      @db.Timestamptz(3)
+  expiresAt                DateTime      @db.Timestamptz(3)
+  revokedAt                DateTime?     @db.Timestamptz(3)
+  revokeReason             String?       @db.VarChar(100)
+  createdAt                DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt                DateTime      @updatedAt @db.Timestamptz(3)
+  deletedAt                DateTime?     @db.Timestamptz(3)
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   device Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
@@ -716,20 +718,20 @@ model Session {
 }
 
 model Subscription {
-  id                  String             @id @default(uuid()) @db.Uuid
-  userId              String             @db.Uuid
-  plan                SubscriptionPlan   @default(FREE)
-  status              SubscriptionStatus @default(ACTIVE)
-  provider            String?            @db.VarChar(40)
-  providerCustomerId  String?            @db.VarChar(255)
-  providerSubscriptionId String?         @unique @db.VarChar(255)
-  currentPeriodStart  DateTime?          @db.Timestamptz(3)
-  currentPeriodEnd    DateTime?          @db.Timestamptz(3)
-  cancelAtPeriodEnd   Boolean            @default(false)
-  entitlements        Json               @default("{}")
-  createdAt           DateTime           @default(now()) @db.Timestamptz(3)
-  updatedAt           DateTime           @updatedAt @db.Timestamptz(3)
-  deletedAt           DateTime?          @db.Timestamptz(3)
+  id                     String             @id @default(uuid()) @db.Uuid
+  userId                 String             @db.Uuid
+  plan                   SubscriptionPlan   @default(FREE)
+  status                 SubscriptionStatus @default(ACTIVE)
+  provider               String?            @db.VarChar(40)
+  providerCustomerId     String?            @db.VarChar(255)
+  providerSubscriptionId String?            @unique @db.VarChar(255)
+  currentPeriodStart     DateTime?          @db.Timestamptz(3)
+  currentPeriodEnd       DateTime?          @db.Timestamptz(3)
+  cancelAtPeriodEnd      Boolean            @default(false)
+  entitlements           Json               @default("{}")
+  createdAt              DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt              DateTime           @updatedAt @db.Timestamptz(3)
+  deletedAt              DateTime?          @db.Timestamptz(3)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -738,20 +740,20 @@ model Subscription {
 }
 
 model AuditLog {
-  id           String        @id @default(uuid()) @db.Uuid
-  actorId      String?       @db.Uuid
-  action       String        @db.VarChar(100)
-  entityType   String        @db.VarChar(80)
-  entityId     String?       @db.Uuid
-  severity     AuditSeverity @default(INFO)
-  outcome      String        @db.VarChar(30)
-  metadata     Json?
-  ipHash       String?       @db.VarChar(128)
-  userAgent    String?       @db.VarChar(512)
-  requestId    String?       @db.VarChar(100)
-  createdAt    DateTime      @default(now()) @db.Timestamptz(3)
-  updatedAt    DateTime      @updatedAt @db.Timestamptz(3)
-  deletedAt    DateTime?     @db.Timestamptz(3)
+  id         String        @id @default(uuid()) @db.Uuid
+  actorId    String?       @db.Uuid
+  action     String        @db.VarChar(100)
+  entityType String        @db.VarChar(80)
+  entityId   String?       @db.Uuid
+  severity   AuditSeverity @default(INFO)
+  outcome    String        @db.VarChar(30)
+  metadata   Json?
+  ipHash     String?       @db.VarChar(128)
+  userAgent  String?       @db.VarChar(512)
+  requestId  String?       @db.VarChar(100)
+  createdAt  DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime      @updatedAt @db.Timestamptz(3)
+  deletedAt  DateTime?     @db.Timestamptz(3)
 
   actor User? @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
 
@@ -762,18 +764,18 @@ model AuditLog {
 }
 
 model VerificationChallenge {
-  id          String              @id @default(uuid()) @db.Uuid
-  userId      String              @db.Uuid
-  purpose     VerificationPurpose
+  id               String              @id @default(uuid()) @db.Uuid
+  userId           String              @db.Uuid
+  purpose          VerificationPurpose
   targetHash       String              @db.VarChar(128)
   targetCiphertext Bytes?
-  codeHash    String              @db.VarChar(128)
-  attempts    Int                 @default(0)
-  expiresAt   DateTime            @db.Timestamptz(3)
-  consumedAt  DateTime?           @db.Timestamptz(3)
-  createdAt   DateTime            @default(now()) @db.Timestamptz(3)
-  updatedAt   DateTime            @updatedAt @db.Timestamptz(3)
-  deletedAt   DateTime?           @db.Timestamptz(3)
+  codeHash         String              @db.VarChar(128)
+  attempts         Int                 @default(0)
+  expiresAt        DateTime            @db.Timestamptz(3)
+  consumedAt       DateTime?           @db.Timestamptz(3)
+  createdAt        DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime            @updatedAt @db.Timestamptz(3)
+  deletedAt        DateTime?           @db.Timestamptz(3)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -799,12 +801,12 @@ model AuthIdentity {
 }
 
 model AiConversation {
-  id          String   @id @default(uuid()) @db.Uuid
-  userId      String   @db.Uuid
-  title       String?  @db.VarChar(100)
-  createdAt   DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
-  deletedAt   DateTime? @db.Timestamptz(3)
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  title     String?   @db.VarChar(100)
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @db.Timestamptz(3)
+  deletedAt DateTime? @db.Timestamptz(3)
 
   user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   interactions AiInteraction[]
@@ -814,21 +816,131 @@ model AiConversation {
 }
 
 model AiInteraction {
-  id                   String   @id @default(uuid()) @db.Uuid
-  conversationId       String   @db.Uuid
-  role                 AiRole
-  content              String   @db.Text
-  intent               String?  @db.VarChar(80)
-  model                 String?  @db.VarChar(80)
+  id                    String    @id @default(uuid()) @db.Uuid
+  conversationId        String    @db.Uuid
+  role                  AiRole
+  content               String    @db.Text
+  intent                String?   @db.VarChar(80)
+  model                 String?   @db.VarChar(80)
   promptTokens          Int?
   completionTokens      Int?
-  preciseLocationShared Boolean @default(false)
-  createdAt             DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt             DateTime @updatedAt @db.Timestamptz(3)
+  preciseLocationShared Boolean   @default(false)
+  createdAt             DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime  @updatedAt @db.Timestamptz(3)
   deletedAt             DateTime? @db.Timestamptz(3)
 
   conversation AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@index([conversationId, createdAt])
   @@map("ai_interactions")
+}
+
+enum AdministrativeAreaType {
+  COUNTRY
+  STATE
+  FCT
+  LGA
+  CITY
+  TOWN
+  DISTRICT
+  WARD
+  LOCALITY
+}
+
+enum TransitCoverageStatus {
+  COMING_SOON
+  DATA_COLLECTION
+  BETA
+  VERIFIED
+  SUSPENDED
+}
+
+enum TransitMode {
+  DANFO
+  BRT
+  CITY_BUS
+  KOROPE
+  KEKE
+  SHARED_TAXI
+  INTERCITY_BUS
+  RAIL
+  FERRY
+  WALK
+  OKADA
+  OTHER
+}
+
+enum TransitPlaceType {
+  STOP
+  MOTOR_PARK
+  TERMINAL
+  STATION
+  JUNCTION
+  LANDMARK
+  JETTY
+  PICKUP_POINT
+}
+
+enum TransitRouteScope {
+  URBAN
+  INTERCITY
+  REGIONAL
+}
+
+enum TransitRouteStatus {
+  DRAFT
+  IN_REVIEW
+  PUBLISHED
+  SUSPENDED
+  RETIRED
+}
+
+enum TransitDirection {
+  OUTBOUND
+  INBOUND
+  LOOP
+  BIDIRECTIONAL
+}
+
+enum TransitReviewStatus {
+  PENDING
+  APPROVED
+  CHANGES_REQUESTED
+  REJECTED
+}
+
+enum TransitDataSourceType {
+  FIELD_SURVEY
+  GOVERNMENT_AGENCY
+  TRANSPORT_OPERATOR
+  UNION_PARTNER
+  INTERNAL_RESEARCH
+}
+
+enum TransitImportStatus {
+  UPLOADED
+  VALIDATING
+  NEEDS_CORRECTION
+  READY
+  IMPORTED
+  FAILED
+}
+
+enum TransitJourneyPreference {
+  BALANCED
+  CHEAPEST
+  FASTEST
+  FEWEST_TRANSFERS
+  LEAST_WALKING
+  FORMAL_TRANSIT
+}
+
+enum TransitServiceDay {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
 }

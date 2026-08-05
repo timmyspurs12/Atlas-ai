@@ -17,7 +17,7 @@
     "dev:mobile": "npm run start --workspace @atlas/mobile",
     "dev:api": "npm run start:dev --workspace @atlas/api",
     "build": "npm run build --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present",
+    "typecheck": "npm run build --workspace @atlas/contracts && npm run typecheck --workspaces --if-present",
     "lint": "node --max-old-space-size=4096 ./node_modules/eslint/bin/eslint.js apps packages --max-warnings=0",
     "test": "npm run test --workspaces --if-present",
     "test:ci": "npm run test --workspaces --if-present -- --runInBand",

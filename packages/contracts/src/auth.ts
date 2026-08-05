@@ -36,7 +36,15 @@ export const refreshSchema = z.object({
 export const sessionUserSchema = userSummarySchema.extend({
   email: z.email().nullable(),
   phone: z.string().nullable(),
-  role: z.enum(['USER', 'BUSINESS_ADMIN', 'DISPATCHER', 'SECURITY_OPERATOR', 'SUPER_ADMIN']),
+  role: z.enum([
+    'USER',
+    'BUSINESS_ADMIN',
+    'DISPATCHER',
+    'SECURITY_OPERATOR',
+    'TRANSIT_EDITOR',
+    'TRANSIT_REVIEWER',
+    'SUPER_ADMIN',
+  ]),
   emailVerified: z.boolean(),
   phoneVerified: z.boolean(),
 });
