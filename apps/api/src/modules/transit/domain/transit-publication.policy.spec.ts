@@ -30,6 +30,7 @@ function publishedRoute(): PublicRouteCandidate {
     deletedAt: null,
     publishedAt: new Date('2026-08-05T12:00:00.000Z'),
     lastVerifiedAt: new Date('2026-08-05T12:00:00.000Z'),
+    confidenceScore: 85,
     originPlace: origin,
     destinationPlace: destination,
     stops: [

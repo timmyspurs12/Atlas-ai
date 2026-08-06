@@ -6,6 +6,7 @@ import {
 import {
   PUBLIC_FARE_MAX_AGE_DAYS,
   PUBLIC_FARE_MIN_CONFIDENCE,
+  PUBLIC_ROUTE_MIN_CONFIDENCE,
 } from '../domain/transit-publication.policy';
 
 const approvedActivePlace = {
@@ -24,6 +25,7 @@ export function buildPublicTransitRouteWhere(): Prisma.TransitRouteWhereInput {
     publishedById: { not: null },
     lastVerifiedAt: { not: null },
     currentRevisionId: { not: null },
+    confidenceScore: { gte: PUBLIC_ROUTE_MIN_CONFIDENCE },
     currentRevision: {
       is: {
         deletedAt: null,

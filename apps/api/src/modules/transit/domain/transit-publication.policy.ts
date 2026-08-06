@@ -1,10 +1,12 @@
 export const PUBLIC_FARE_MAX_AGE_DAYS = 30;
 export const PUBLIC_FARE_MIN_CONFIDENCE = 50;
+export const PUBLIC_ROUTE_MIN_CONFIDENCE = 60;
 
 export type PublicRouteBlockReason =
   | 'ROUTE_NOT_PUBLISHED'
   | 'ROUTE_DELETED'
   | 'ROUTE_NOT_VERIFIED'
+  | 'ROUTE_CONFIDENCE_TOO_LOW'
   | 'ORIGIN_NOT_APPROVED'
   | 'DESTINATION_NOT_APPROVED'
   | 'INSUFFICIENT_ACTIVE_STOPS'
@@ -57,6 +59,7 @@ export interface PublicRouteCandidate {
   deletedAt: Date | null;
   publishedAt: Date | null;
   lastVerifiedAt: Date | null;
+  confidenceScore: number;
   originPlace: PublicPlaceCandidate;
   destinationPlace: PublicPlaceCandidate;
   stops: PublicRouteStopCandidate[];
@@ -107,6 +110,9 @@ export function evaluateRouteForPublicUse(route: PublicRouteCandidate): PublicRo
   if (route.deletedAt !== null) reasons.add('ROUTE_DELETED');
   if (route.lastVerifiedAt === null || route.publishedAt === null) {
     reasons.add('ROUTE_NOT_VERIFIED');
+  }
+  if (route.confidenceScore < PUBLIC_ROUTE_MIN_CONFIDENCE) {
+    reasons.add('ROUTE_CONFIDENCE_TOO_LOW');
   }
   if (!isApprovedPlace(route.originPlace)) reasons.add('ORIGIN_NOT_APPROVED');
   if (!isApprovedPlace(route.destinationPlace)) {
