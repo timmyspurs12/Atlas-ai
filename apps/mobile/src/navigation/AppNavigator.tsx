@@ -1,7 +1,7 @@
 import { NavigationContainer, DarkTheme, DefaultTheme, type Theme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Bot, Clock3, Map, Settings, UsersRound } from 'lucide-react-native';
+import { BusFront, Clock3, Map, Settings, UsersRound } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { ActivityScreen } from '@/features/activity/screens/ActivityScreen';
 import { AssistantScreen } from '@/features/assistant/screens/AssistantScreen';
@@ -14,6 +14,7 @@ import { PeopleScreen } from '@/features/friends/screens/PeopleScreen';
 import { GeofencesScreen } from '@/features/geofences/screens/GeofencesScreen';
 import { HomeScreen } from '@/features/home/screens/HomeScreen';
 import { NotificationsScreen } from '@/features/notifications/screens/NotificationsScreen';
+import { RoutesScreen } from '@/features/routes/screens/RoutesScreen';
 import { SafetyScreen } from '@/features/safety/screens/SafetyScreen';
 import { SettingsScreen } from '@/features/settings/screens/SettingsScreen';
 import { palette, typography } from '@/shared/config/theme';
@@ -27,8 +28,8 @@ const Tabs = createBottomTabNavigator<MainTabParamList>();
 const tabIcons: Record<keyof MainTabParamList, LucideIcon> = {
   Home: Map,
   People: UsersRound,
+  Routes: BusFront,
   Activity: Clock3,
-  Assistant: Bot,
   Settings,
 };
 
@@ -59,8 +60,8 @@ function MainTabs() {
     >
       <Tabs.Screen name="Home" component={HomeScreen} />
       <Tabs.Screen name="People" component={PeopleScreen} />
+      <Tabs.Screen name="Routes" component={RoutesScreen} />
       <Tabs.Screen name="Activity" component={ActivityScreen} />
-      <Tabs.Screen name="Assistant" component={AssistantScreen} />
       <Tabs.Screen name="Settings" component={SettingsScreen} />
     </Tabs.Navigator>
   );
@@ -93,6 +94,7 @@ export function AppNavigator() {
             Register: 'register',
             ForgotPassword: 'reset-password',
             Chat: 'chat/:conversationId',
+            Assistant: 'assistant',
             Safety: 'safety',
           },
         },
@@ -110,6 +112,11 @@ export function AppNavigator() {
             <Stack.Screen
               name="Chat"
               component={ChatScreen}
+              options={{ animation: 'slide_from_right' }}
+            />
+            <Stack.Screen
+              name="Assistant"
+              component={AssistantScreen}
               options={{ animation: 'slide_from_right' }}
             />
             <Stack.Screen

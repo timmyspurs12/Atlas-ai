@@ -6,6 +6,7 @@ export type RootStackParamList = {
   Main: undefined;
   Notifications: undefined;
   Chat: { conversationId?: string; title?: string } | undefined;
+  Assistant: undefined;
   Geofences: undefined;
   Safety: undefined;
 };
@@ -13,7 +14,7 @@ export type RootStackParamList = {
 export type MainTabParamList = {
   Home: undefined;
   People: undefined;
+  Routes: undefined;
   Activity: undefined;
-  Assistant: undefined;
   Settings: undefined;
 };

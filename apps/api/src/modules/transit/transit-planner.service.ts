@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { haversineDistanceM } from '../../common/utils/geo.util';
 import { PrismaService } from '../../database/prisma.service';
 import {
   TransitCoverageStatus,
@@ -20,7 +21,11 @@ import {
   buildPublicFareObservationWhere,
   buildPublicTransitRouteWhere,
 } from './infrastructure/public-transit.query';
-import type { PlanTransitJourneyDto, SearchTransitPlacesDto } from './transit-planner.dto';
+import type {
+  NearbyTransitPlacesDto,
+  PlanTransitJourneyDto,
+  SearchTransitPlacesDto,
+} from './transit-planner.dto';
 
 @Injectable()
 export class TransitPlannerService {
@@ -83,6 +88,70 @@ export class TransitPlannerService {
         modes: place.modes.map((mode) => mode.mode),
       })),
     };
+  }
+
+  async nearbyPlaces(input: NearbyTransitPlacesDto): Promise<Record<string, unknown>> {
+    const latitudeDelta = input.radiusM / 111_320;
+    const longitudeScale = Math.max(Math.cos((input.latitude * Math.PI) / 180), 0.2);
+    const longitudeDelta = input.radiusM / (111_320 * longitudeScale);
+    const candidates = await this.prisma.transitPlace.findMany({
+      where: {
+        latitude: {
+          gte: input.latitude - latitudeDelta,
+          lte: input.latitude + latitudeDelta,
+        },
+        longitude: {
+          gte: input.longitude - longitudeDelta,
+          lte: input.longitude + longitudeDelta,
+        },
+        verificationStatus: TransitReviewStatus.APPROVED,
+        isActive: true,
+        deletedAt: null,
+        area: {
+          is: {
+            coverage: {
+              is: {
+                status: {
+                  in: [TransitCoverageStatus.BETA, TransitCoverageStatus.VERIFIED],
+                },
+                deletedAt: null,
+              },
+            },
+          },
+        },
+      },
+      include: {
+        area: { select: { id: true, name: true, type: true } },
+        modes: { where: { deletedAt: null } },
+      },
+      take: 100,
+    });
+    const data = candidates
+      .map((place) => ({
+        id: place.id,
+        code: place.code,
+        name: place.name,
+        type: place.type,
+        area: place.area,
+        modes: place.modes.map((mode) => mode.mode),
+        coordinates: {
+          latitude: Number(place.latitude),
+          longitude: Number(place.longitude),
+        },
+        distanceM: Math.round(
+          haversineDistanceM(
+            { latitude: input.latitude, longitude: input.longitude },
+            {
+              latitude: Number(place.latitude),
+              longitude: Number(place.longitude),
+            },
+          ),
+        ),
+      }))
+      .filter((place) => place.distanceM <= input.radiusM)
+      .sort((first, second) => first.distanceM - second.distanceM)
+      .slice(0, input.limit);
+    return { data, radiusM: input.radiusM };
   }
 
   async plan(input: PlanTransitJourneyDto): Promise<Record<string, unknown>> {

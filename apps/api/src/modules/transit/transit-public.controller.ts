@@ -1,7 +1,11 @@
 import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
-import { PlanTransitJourneyDto, SearchTransitPlacesDto } from './transit-planner.dto';
+import {
+  NearbyTransitPlacesDto,
+  PlanTransitJourneyDto,
+  SearchTransitPlacesDto,
+} from './transit-planner.dto';
 import { TransitPlannerService } from './transit-planner.service';
 
 @ApiTags('Transit journeys')
@@ -17,6 +21,15 @@ export class TransitPublicController {
     @Query() input: SearchTransitPlacesDto,
   ): ReturnType<TransitPlannerService['searchPlaces']> {
     return this.planner.searchPlaces(input);
+  }
+
+  @Get('places/nearby')
+  @Throttle({ default: { limit: 60, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Find approved transit places near coordinates' })
+  nearbyPlaces(
+    @Query() input: NearbyTransitPlacesDto,
+  ): ReturnType<TransitPlannerService['nearbyPlaces']> {
+    return this.planner.nearbyPlaces(input);
   }
 
   @Post('journeys/plan')
