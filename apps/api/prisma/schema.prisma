@@ -13,6 +13,8 @@ enum UserRole {
   BUSINESS_ADMIN
   DISPATCHER
   SECURITY_OPERATOR
+  TRANSIT_EDITOR
+  TRANSIT_REVIEWER
   SUPER_ADMIN
 }
 
@@ -165,73 +167,81 @@ enum AiRole {
 }
 
 model User {
-  id                 String     @id @default(uuid()) @db.Uuid
-  email              String?    @unique @db.VarChar(320)
-  phone              String?    @unique @db.VarChar(32)
-  passwordHash       String?    @db.VarChar(255)
-  role               UserRole   @default(USER)
-  status             UserStatus @default(ACTIVE)
-  emailVerifiedAt    DateTime?   @db.Timestamptz(3)
-  phoneVerifiedAt    DateTime?   @db.Timestamptz(3)
-  lastSeenAt         DateTime?   @db.Timestamptz(3)
-  termsVersion       String      @db.VarChar(20)
-  termsAcceptedAt    DateTime    @db.Timestamptz(3)
+  id                  String     @id @default(uuid()) @db.Uuid
+  email               String?    @unique @db.VarChar(320)
+  phone               String?    @unique @db.VarChar(32)
+  passwordHash        String?    @db.VarChar(255)
+  role                UserRole   @default(USER)
+  status              UserStatus @default(ACTIVE)
+  emailVerifiedAt     DateTime?  @db.Timestamptz(3)
+  phoneVerifiedAt     DateTime?  @db.Timestamptz(3)
+  lastSeenAt          DateTime?  @db.Timestamptz(3)
+  termsVersion        String     @db.VarChar(20)
+  termsAcceptedAt     DateTime   @db.Timestamptz(3)
   deletionScheduledAt DateTime?  @db.Timestamptz(3)
-  createdAt          DateTime    @default(now()) @db.Timestamptz(3)
-  updatedAt          DateTime    @updatedAt @db.Timestamptz(3)
-  deletedAt          DateTime?   @db.Timestamptz(3)
+  createdAt           DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime   @updatedAt @db.Timestamptz(3)
+  deletedAt           DateTime?  @db.Timestamptz(3)
 
-  profile                  Profile?
-  sentFriendRequests       Friendship[]        @relation("FriendshipRequester")
-  receivedFriendRequests   Friendship[]        @relation("FriendshipAddressee")
-  blocksInitiated          UserBlock[]          @relation("Blocker")
-  blocksReceived           UserBlock[]          @relation("BlockedUser")
-  locationSharesOwned      LocationShare[]      @relation("ShareOwner")
-  locationSharesReceived   LocationShare[]      @relation("ShareRecipient")
-  locationSharesRevoked    LocationShare[]      @relation("ShareRevoker")
-  liveLocation             LiveLocation?
-  trips                    Trip[]
-  messages                 Message[]            @relation("MessageSender")
-  messageReceipts          MessageReceipt[]
-  conversationMemberships  ConversationMember[]
-  conversationsCreated     Conversation[]       @relation("ConversationCreator")
-  notifications            Notification[]       @relation("NotificationRecipient")
-  notificationPreference   NotificationPreference?
-  notificationsActed       Notification[]       @relation("NotificationActor")
-  emergencyContactsOwned   EmergencyContact[]   @relation("EmergencyOwner")
-  emergencyContactFor      EmergencyContact[]   @relation("EmergencyContactUser")
-  geofencesOwned           Geofence[]           @relation("GeofenceOwner")
-  geofencesAsSubject       Geofence[]           @relation("GeofenceSubject")
-  devices                  Device[]
-  sessions                 Session[]
-  subscriptions            Subscription[]
-  auditLogs                AuditLog[]            @relation("AuditActor")
-  verificationChallenges   VerificationChallenge[]
-  authIdentities           AuthIdentity[]
-  sosAlerts                SosAlert[]            @relation("SosInitiator")
-  sosRecipients            SosRecipient[]
-  aiConversations          AiConversation[]
+  profile                     Profile?
+  sentFriendRequests          Friendship[]             @relation("FriendshipRequester")
+  receivedFriendRequests      Friendship[]             @relation("FriendshipAddressee")
+  blocksInitiated             UserBlock[]              @relation("Blocker")
+  blocksReceived              UserBlock[]              @relation("BlockedUser")
+  locationSharesOwned         LocationShare[]          @relation("ShareOwner")
+  locationSharesReceived      LocationShare[]          @relation("ShareRecipient")
+  locationSharesRevoked       LocationShare[]          @relation("ShareRevoker")
+  liveLocation                LiveLocation?
+  trips                       Trip[]
+  messages                    Message[]                @relation("MessageSender")
+  messageReceipts             MessageReceipt[]
+  conversationMemberships     ConversationMember[]
+  conversationsCreated        Conversation[]           @relation("ConversationCreator")
+  notifications               Notification[]           @relation("NotificationRecipient")
+  notificationPreference      NotificationPreference?
+  notificationsActed          Notification[]           @relation("NotificationActor")
+  emergencyContactsOwned      EmergencyContact[]       @relation("EmergencyOwner")
+  emergencyContactFor         EmergencyContact[]       @relation("EmergencyContactUser")
+  geofencesOwned              Geofence[]               @relation("GeofenceOwner")
+  geofencesAsSubject          Geofence[]               @relation("GeofenceSubject")
+  devices                     Device[]
+  sessions                    Session[]
+  subscriptions               Subscription[]
+  auditLogs                   AuditLog[]               @relation("AuditActor")
+  verificationChallenges      VerificationChallenge[]
+  authIdentities              AuthIdentity[]
+  sosAlerts                   SosAlert[]               @relation("SosInitiator")
+  sosRecipients               SosRecipient[]
+  aiConversations             AiConversation[]
+  transitRoutesCreated        TransitRoute[]           @relation("TransitRouteCreator")
+  transitRoutesPublished      TransitRoute[]           @relation("TransitRoutePublisher")
+  transitFareObservations     TransitFareObservation[] @relation("TransitFareRecorder")
+  transitRouteRevisions       TransitRouteRevision[]   @relation("TransitRevisionCreator")
+  transitRouteReviews         TransitRouteReview[]     @relation("TransitRouteReviewer")
+  transitImportJobs           TransitImportJob[]       @relation("TransitImportCreator")
+  transitDisruptionsPublished TransitDisruption[]      @relation("TransitDisruptionPublisher")
+  savedTransitJourneys        SavedTransitJourney[]
 
   @@index([status, deletedAt])
   @@map("users")
 }
 
 model Profile {
-  id                      String   @id @default(uuid()) @db.Uuid
-  userId                  String   @unique @db.Uuid
-  displayName             String   @db.VarChar(60)
-  handle                  String?  @unique @db.VarChar(30)
-  avatarUrl               String?  @db.VarChar(2048)
-  bio                     String?  @db.VarChar(240)
-  timezone                String   @default("UTC") @db.VarChar(64)
-  locale                  String   @default("en") @db.VarChar(16)
-  isDiscoverable          Boolean  @default(true)
-  showOnlineStatus        Boolean  @default(true)
-  defaultSharePrecision   LocationPrecision @default(PRECISE)
-  analyticsConsentAt      DateTime? @db.Timestamptz(3)
-  createdAt               DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt               DateTime @updatedAt @db.Timestamptz(3)
-  deletedAt               DateTime? @db.Timestamptz(3)
+  id                    String            @id @default(uuid()) @db.Uuid
+  userId                String            @unique @db.Uuid
+  displayName           String            @db.VarChar(60)
+  handle                String?           @unique @db.VarChar(30)
+  avatarUrl             String?           @db.VarChar(2048)
+  bio                   String?           @db.VarChar(240)
+  timezone              String            @default("UTC") @db.VarChar(64)
+  locale                String            @default("en") @db.VarChar(16)
+  isDiscoverable        Boolean           @default(true)
+  showOnlineStatus      Boolean           @default(true)
+  defaultSharePrecision LocationPrecision @default(PRECISE)
+  analyticsConsentAt    DateTime?         @db.Timestamptz(3)
+  createdAt             DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime          @updatedAt @db.Timestamptz(3)
+  deletedAt             DateTime?         @db.Timestamptz(3)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -241,15 +251,15 @@ model Profile {
 }
 
 model Friendship {
-  id           String           @id @default(uuid()) @db.Uuid
-  requesterId  String           @db.Uuid
-  addresseeId  String           @db.Uuid
-  pairKey      String           @unique @db.VarChar(73)
-  status       FriendshipStatus @default(PENDING)
-  respondedAt  DateTime?        @db.Timestamptz(3)
-  createdAt    DateTime         @default(now()) @db.Timestamptz(3)
-  updatedAt    DateTime         @updatedAt @db.Timestamptz(3)
-  deletedAt    DateTime?        @db.Timestamptz(3)
+  id          String           @id @default(uuid()) @db.Uuid
+  requesterId String           @db.Uuid
+  addresseeId String           @db.Uuid
+  pairKey     String           @unique @db.VarChar(73)
+  status      FriendshipStatus @default(PENDING)
+  respondedAt DateTime?        @db.Timestamptz(3)
+  createdAt   DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime         @updatedAt @db.Timestamptz(3)
+  deletedAt   DateTime?        @db.Timestamptz(3)
 
   requester User @relation("FriendshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
   addressee User @relation("FriendshipAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
@@ -261,12 +271,12 @@ model Friendship {
 }
 
 model UserBlock {
-  id            String   @id @default(uuid()) @db.Uuid
-  blockerId     String   @db.Uuid
-  blockedUserId String   @db.Uuid
-  reason        String?  @db.VarChar(200)
-  createdAt     DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt     DateTime @updatedAt @db.Timestamptz(3)
+  id            String    @id @default(uuid()) @db.Uuid
+  blockerId     String    @db.Uuid
+  blockedUserId String    @db.Uuid
+  reason        String?   @db.VarChar(200)
+  createdAt     DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime  @updatedAt @db.Timestamptz(3)
   deletedAt     DateTime? @db.Timestamptz(3)
 
   blocker     User @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
@@ -278,23 +288,23 @@ model UserBlock {
 }
 
 model LocationShare {
-  id             String              @id @default(uuid()) @db.Uuid
-  ownerId        String              @db.Uuid
-  recipientId    String              @db.Uuid
-  revokedById    String?             @db.Uuid
-  status         LocationShareStatus @default(ACTIVE)
-  precision      LocationPrecision   @default(PRECISE)
-  shareBattery   Boolean             @default(true)
-  shareSpeed     Boolean             @default(true)
-  allowGeofences Boolean             @default(false)
-  startsAt       DateTime            @db.Timestamptz(3)
-  expiresAt      DateTime            @db.Timestamptz(3)
-  endedAt        DateTime?           @db.Timestamptz(3)
-  lastBroadcastAt DateTime?          @db.Timestamptz(3)
-  version        Int                 @default(1)
-  createdAt      DateTime            @default(now()) @db.Timestamptz(3)
-  updatedAt      DateTime            @updatedAt @db.Timestamptz(3)
-  deletedAt      DateTime?           @db.Timestamptz(3)
+  id              String              @id @default(uuid()) @db.Uuid
+  ownerId         String              @db.Uuid
+  recipientId     String              @db.Uuid
+  revokedById     String?             @db.Uuid
+  status          LocationShareStatus @default(ACTIVE)
+  precision       LocationPrecision   @default(PRECISE)
+  shareBattery    Boolean             @default(true)
+  shareSpeed      Boolean             @default(true)
+  allowGeofences  Boolean             @default(false)
+  startsAt        DateTime            @db.Timestamptz(3)
+  expiresAt       DateTime            @db.Timestamptz(3)
+  endedAt         DateTime?           @db.Timestamptz(3)
+  lastBroadcastAt DateTime?           @db.Timestamptz(3)
+  version         Int                 @default(1)
+  createdAt       DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime            @updatedAt @db.Timestamptz(3)
+  deletedAt       DateTime?           @db.Timestamptz(3)
 
   owner     User  @relation("ShareOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   recipient User  @relation("ShareRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
@@ -306,22 +316,22 @@ model LocationShare {
 }
 
 model LiveLocation {
-  id             String   @id @default(uuid()) @db.Uuid
-  userId         String   @unique @db.Uuid
-  sourceDeviceId String?  @db.Uuid
-  latitude       Decimal  @db.Decimal(10, 7)
-  longitude      Decimal  @db.Decimal(10, 7)
-  altitudeM      Decimal? @db.Decimal(8, 2)
-  accuracyM      Decimal  @db.Decimal(8, 2)
-  headingDeg     Decimal? @db.Decimal(6, 2)
-  speedMps       Decimal? @db.Decimal(7, 2)
+  id             String    @id @default(uuid()) @db.Uuid
+  userId         String    @unique @db.Uuid
+  sourceDeviceId String?   @db.Uuid
+  latitude       Decimal   @db.Decimal(10, 7)
+  longitude      Decimal   @db.Decimal(10, 7)
+  altitudeM      Decimal?  @db.Decimal(8, 2)
+  accuracyM      Decimal   @db.Decimal(8, 2)
+  headingDeg     Decimal?  @db.Decimal(6, 2)
+  speedMps       Decimal?  @db.Decimal(7, 2)
   batteryPct     Int?
   isCharging     Boolean?
-  isMocked       Boolean  @default(false)
+  isMocked       Boolean   @default(false)
   sequence       BigInt
-  recordedAt     DateTime @db.Timestamptz(3)
-  createdAt      DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt      DateTime @updatedAt @db.Timestamptz(3)
+  recordedAt     DateTime  @db.Timestamptz(3)
+  createdAt      DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @db.Timestamptz(3)
   deletedAt      DateTime? @db.Timestamptz(3)
 
   user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -333,25 +343,25 @@ model LiveLocation {
 }
 
 model Trip {
-  id                String     @id @default(uuid()) @db.Uuid
-  userId            String     @db.Uuid
-  status            TripStatus @default(ACTIVE)
-  source            TripSource @default(AUTOMATIC)
-  title             String?    @db.VarChar(120)
-  startedAt         DateTime   @db.Timestamptz(3)
-  endedAt           DateTime?  @db.Timestamptz(3)
-  startLabel        String?    @db.VarChar(200)
-  endLabel          String?    @db.VarChar(200)
-  distanceM         Int        @default(0)
-  durationSeconds   Int        @default(0)
-  averageSpeedMps   Decimal?   @db.Decimal(7, 2)
-  maxSpeedMps       Decimal?   @db.Decimal(7, 2)
-  carbonEstimateG   Int?
-  aiSummary         String?    @db.Text
-  summaryGeneratedAt DateTime? @db.Timestamptz(3)
-  createdAt         DateTime   @default(now()) @db.Timestamptz(3)
-  updatedAt         DateTime   @updatedAt @db.Timestamptz(3)
-  deletedAt         DateTime?  @db.Timestamptz(3)
+  id                 String     @id @default(uuid()) @db.Uuid
+  userId             String     @db.Uuid
+  status             TripStatus @default(ACTIVE)
+  source             TripSource @default(AUTOMATIC)
+  title              String?    @db.VarChar(120)
+  startedAt          DateTime   @db.Timestamptz(3)
+  endedAt            DateTime?  @db.Timestamptz(3)
+  startLabel         String?    @db.VarChar(200)
+  endLabel           String?    @db.VarChar(200)
+  distanceM          Int        @default(0)
+  durationSeconds    Int        @default(0)
+  averageSpeedMps    Decimal?   @db.Decimal(7, 2)
+  maxSpeedMps        Decimal?   @db.Decimal(7, 2)
+  carbonEstimateG    Int?
+  aiSummary          String?    @db.Text
+  summaryGeneratedAt DateTime?  @db.Timestamptz(3)
+  createdAt          DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime   @updatedAt @db.Timestamptz(3)
+  deletedAt          DateTime?  @db.Timestamptz(3)
 
   user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   points TripPoint[]
@@ -362,19 +372,19 @@ model Trip {
 }
 
 model TripPoint {
-  id             String   @id @default(uuid()) @db.Uuid
-  tripId         String   @db.Uuid
-  sourceDeviceId String?  @db.Uuid
-  latitude       Decimal  @db.Decimal(10, 7)
-  longitude      Decimal  @db.Decimal(10, 7)
-  altitudeM      Decimal? @db.Decimal(8, 2)
-  accuracyM      Decimal  @db.Decimal(8, 2)
-  headingDeg     Decimal? @db.Decimal(6, 2)
-  speedMps       Decimal? @db.Decimal(7, 2)
+  id             String    @id @default(uuid()) @db.Uuid
+  tripId         String    @db.Uuid
+  sourceDeviceId String?   @db.Uuid
+  latitude       Decimal   @db.Decimal(10, 7)
+  longitude      Decimal   @db.Decimal(10, 7)
+  altitudeM      Decimal?  @db.Decimal(8, 2)
+  accuracyM      Decimal   @db.Decimal(8, 2)
+  headingDeg     Decimal?  @db.Decimal(6, 2)
+  speedMps       Decimal?  @db.Decimal(7, 2)
   sequence       Int
-  recordedAt     DateTime @db.Timestamptz(3)
-  createdAt      DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt      DateTime @updatedAt @db.Timestamptz(3)
+  recordedAt     DateTime  @db.Timestamptz(3)
+  createdAt      DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @db.Timestamptz(3)
   deletedAt      DateTime? @db.Timestamptz(3)
 
   trip         Trip    @relation(fields: [tripId], references: [id], onDelete: Cascade)
@@ -386,15 +396,15 @@ model TripPoint {
 }
 
 model Conversation {
-  id          String           @id @default(uuid()) @db.Uuid
+  id            String           @id @default(uuid()) @db.Uuid
   type          ConversationType @default(DIRECT)
   directPairKey String?          @unique @db.VarChar(73)
   createdById   String?          @db.Uuid
-  title       String?          @db.VarChar(100)
-  avatarUrl   String?          @db.VarChar(2048)
-  createdAt   DateTime         @default(now()) @db.Timestamptz(3)
-  updatedAt   DateTime         @updatedAt @db.Timestamptz(3)
-  deletedAt   DateTime?        @db.Timestamptz(3)
+  title         String?          @db.VarChar(100)
+  avatarUrl     String?          @db.VarChar(2048)
+  createdAt     DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime         @updatedAt @db.Timestamptz(3)
+  deletedAt     DateTime?        @db.Timestamptz(3)
 
   createdBy User?                @relation("ConversationCreator", fields: [createdById], references: [id], onDelete: SetNull)
   members   ConversationMember[]
@@ -405,14 +415,14 @@ model Conversation {
 }
 
 model ConversationMember {
-  id             String   @id @default(uuid()) @db.Uuid
-  conversationId String   @db.Uuid
-  userId         String   @db.Uuid
-  joinedAt       DateTime @db.Timestamptz(3)
+  id             String    @id @default(uuid()) @db.Uuid
+  conversationId String    @db.Uuid
+  userId         String    @db.Uuid
+  joinedAt       DateTime  @db.Timestamptz(3)
   mutedUntil     DateTime? @db.Timestamptz(3)
   lastReadAt     DateTime? @db.Timestamptz(3)
-  createdAt      DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt      DateTime @updatedAt @db.Timestamptz(3)
+  createdAt      DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @db.Timestamptz(3)
   deletedAt      DateTime? @db.Timestamptz(3)
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
@@ -428,7 +438,7 @@ model Message {
   conversationId       String      @db.Uuid
   senderId             String      @db.Uuid
   clientMessageId      String      @db.Uuid
-  type                  MessageType @default(TEXT)
+  type                 MessageType @default(TEXT)
   bodyCiphertext       Bytes?
   bodyPreview          String?     @db.VarChar(160)
   encryptionKeyVersion Int         @default(1)
@@ -452,18 +462,18 @@ model Message {
 }
 
 model MessageAttachment {
-  id           String   @id @default(uuid()) @db.Uuid
-  messageId    String   @db.Uuid
-  storageKey   String   @db.VarChar(512)
-  mimeType     String   @db.VarChar(100)
-  sizeBytes    Int
-  durationMs   Int?
-  width        Int?
-  height       Int?
-  checksum     String   @db.VarChar(128)
-  createdAt    DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt    DateTime @updatedAt @db.Timestamptz(3)
-  deletedAt    DateTime? @db.Timestamptz(3)
+  id         String    @id @default(uuid()) @db.Uuid
+  messageId  String    @db.Uuid
+  storageKey String    @db.VarChar(512)
+  mimeType   String    @db.VarChar(100)
+  sizeBytes  Int
+  durationMs Int?
+  width      Int?
+  height     Int?
+  checksum   String    @db.VarChar(128)
+  createdAt  DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime  @updatedAt @db.Timestamptz(3)
+  deletedAt  DateTime? @db.Timestamptz(3)
 
   message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
@@ -472,14 +482,14 @@ model MessageAttachment {
 }
 
 model MessageReceipt {
-  id        String               @id @default(uuid()) @db.Uuid
-  messageId String               @db.Uuid
-  userId    String               @db.Uuid
-  status    MessageReceiptStatus
-  occurredAt DateTime            @db.Timestamptz(3)
-  createdAt DateTime             @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime             @updatedAt @db.Timestamptz(3)
-  deletedAt DateTime?            @db.Timestamptz(3)
+  id         String               @id @default(uuid()) @db.Uuid
+  messageId  String               @db.Uuid
+  userId     String               @db.Uuid
+  status     MessageReceiptStatus
+  occurredAt DateTime             @db.Timestamptz(3)
+  createdAt  DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime             @updatedAt @db.Timestamptz(3)
+  deletedAt  DateTime?            @db.Timestamptz(3)
 
   message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -490,19 +500,19 @@ model MessageReceipt {
 }
 
 model Notification {
-  id         String              @id @default(uuid()) @db.Uuid
-  userId     String              @db.Uuid
-  actorId    String?             @db.Uuid
-  type       NotificationType
-  channel    NotificationChannel @default(IN_APP)
-  title      String              @db.VarChar(120)
-  body       String              @db.VarChar(500)
-  data       Json?
-  readAt     DateTime?           @db.Timestamptz(3)
-  deliveredAt DateTime?          @db.Timestamptz(3)
-  createdAt  DateTime            @default(now()) @db.Timestamptz(3)
-  updatedAt  DateTime            @updatedAt @db.Timestamptz(3)
-  deletedAt  DateTime?           @db.Timestamptz(3)
+  id          String              @id @default(uuid()) @db.Uuid
+  userId      String              @db.Uuid
+  actorId     String?             @db.Uuid
+  type        NotificationType
+  channel     NotificationChannel @default(IN_APP)
+  title       String              @db.VarChar(120)
+  body        String              @db.VarChar(500)
+  data        Json?
+  readAt      DateTime?           @db.Timestamptz(3)
+  deliveredAt DateTime?           @db.Timestamptz(3)
+  createdAt   DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime            @updatedAt @db.Timestamptz(3)
+  deletedAt   DateTime?           @db.Timestamptz(3)
 
   user  User  @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
   actor User? @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
@@ -512,20 +522,20 @@ model Notification {
 }
 
 model NotificationPreference {
-  id                   String   @id @default(uuid()) @db.Uuid
-  userId               String   @unique @db.Uuid
-  pushEnabled          Boolean  @default(true)
-  friendRequests       Boolean  @default(true)
-  locationSharing      Boolean  @default(true)
-  geofenceAlerts       Boolean  @default(true)
-  chatMessages         Boolean  @default(true)
-  sosAlerts            Boolean  @default(true)
-  weeklyReports        Boolean  @default(true)
-  productUpdates       Boolean  @default(false)
-  quietHours           Json?
-  createdAt            DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt            DateTime @updatedAt @db.Timestamptz(3)
-  deletedAt            DateTime? @db.Timestamptz(3)
+  id              String    @id @default(uuid()) @db.Uuid
+  userId          String    @unique @db.Uuid
+  pushEnabled     Boolean   @default(true)
+  friendRequests  Boolean   @default(true)
+  locationSharing Boolean   @default(true)
+  geofenceAlerts  Boolean   @default(true)
+  chatMessages    Boolean   @default(true)
+  sosAlerts       Boolean   @default(true)
+  weeklyReports   Boolean   @default(true)
+  productUpdates  Boolean   @default(false)
+  quietHours      Json?
+  createdAt       DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @db.Timestamptz(3)
+  deletedAt       DateTime? @db.Timestamptz(3)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -534,21 +544,21 @@ model NotificationPreference {
 }
 
 model EmergencyContact {
-  id            String   @id @default(uuid()) @db.Uuid
-  ownerId       String   @db.Uuid
-  contactUserId String?  @db.Uuid
-  name          String   @db.VarChar(80)
-  phone         String?  @db.VarChar(32)
-  email         String?  @db.VarChar(320)
-  relationship  String?  @db.VarChar(40)
-  isVerified    Boolean  @default(false)
+  id            String    @id @default(uuid()) @db.Uuid
+  ownerId       String    @db.Uuid
+  contactUserId String?   @db.Uuid
+  name          String    @db.VarChar(80)
+  phone         String?   @db.VarChar(32)
+  email         String?   @db.VarChar(320)
+  relationship  String?   @db.VarChar(40)
+  isVerified    Boolean   @default(false)
   verifiedAt    DateTime? @db.Timestamptz(3)
-  priority      Int      @default(0)
-  notifyPush    Boolean  @default(true)
-  notifySms     Boolean  @default(false)
-  notifyEmail   Boolean  @default(false)
-  createdAt     DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt     DateTime @updatedAt @db.Timestamptz(3)
+  priority      Int       @default(0)
+  notifyPush    Boolean   @default(true)
+  notifySms     Boolean   @default(false)
+  notifyEmail   Boolean   @default(false)
+  createdAt     DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime  @updatedAt @db.Timestamptz(3)
   deletedAt     DateTime? @db.Timestamptz(3)
 
   owner       User  @relation("EmergencyOwner", fields: [ownerId], references: [id], onDelete: Cascade)
@@ -575,7 +585,7 @@ model SosAlert {
   updatedAt       DateTime        @updatedAt @db.Timestamptz(3)
   deletedAt       DateTime?       @db.Timestamptz(3)
 
-  initiator User           @relation("SosInitiator", fields: [initiatorId], references: [id], onDelete: Cascade)
+  initiator  User           @relation("SosInitiator", fields: [initiatorId], references: [id], onDelete: Cascade)
   recipients SosRecipient[]
 
   @@index([initiatorId, status, createdAt(sort: Desc)])
@@ -583,16 +593,16 @@ model SosAlert {
 }
 
 model SosRecipient {
-  id                 String   @id @default(uuid()) @db.Uuid
-  sosAlertId         String   @db.Uuid
-  userId             String?  @db.Uuid
-  destination        String?  @db.VarChar(320)
-  channels           Json
-  deliveryState      Json?
-  acknowledgedAt     DateTime? @db.Timestamptz(3)
-  createdAt          DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt          DateTime @updatedAt @db.Timestamptz(3)
-  deletedAt          DateTime? @db.Timestamptz(3)
+  id             String    @id @default(uuid()) @db.Uuid
+  sosAlertId     String    @db.Uuid
+  userId         String?   @db.Uuid
+  destination    String?   @db.VarChar(320)
+  channels       Json
+  deliveryState  Json?
+  acknowledgedAt DateTime? @db.Timestamptz(3)
+  createdAt      DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @db.Timestamptz(3)
+  deletedAt      DateTime? @db.Timestamptz(3)
 
   alert SosAlert @relation(fields: [sosAlertId], references: [id], onDelete: Cascade)
   user  User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
@@ -603,24 +613,24 @@ model SosRecipient {
 }
 
 model Geofence {
-  id             String        @id @default(uuid()) @db.Uuid
-  ownerId        String        @db.Uuid
-  subjectUserId  String        @db.Uuid
-  type           GeofenceType  @default(CUSTOM)
-  name           String        @db.VarChar(80)
-  latitude       Decimal       @db.Decimal(10, 7)
-  longitude      Decimal       @db.Decimal(10, 7)
-  radiusM        Int
-  notifyOnArrival Boolean      @default(true)
-  notifyOnDeparture Boolean    @default(true)
-  isEnabled      Boolean       @default(true)
-  schedule       Json?
-  createdAt      DateTime      @default(now()) @db.Timestamptz(3)
-  updatedAt      DateTime      @updatedAt @db.Timestamptz(3)
-  deletedAt      DateTime?     @db.Timestamptz(3)
+  id                String       @id @default(uuid()) @db.Uuid
+  ownerId           String       @db.Uuid
+  subjectUserId     String       @db.Uuid
+  type              GeofenceType @default(CUSTOM)
+  name              String       @db.VarChar(80)
+  latitude          Decimal      @db.Decimal(10, 7)
+  longitude         Decimal      @db.Decimal(10, 7)
+  radiusM           Int
+  notifyOnArrival   Boolean      @default(true)
+  notifyOnDeparture Boolean      @default(true)
+  isEnabled         Boolean      @default(true)
+  schedule          Json?
+  createdAt         DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime     @updatedAt @db.Timestamptz(3)
+  deletedAt         DateTime?    @db.Timestamptz(3)
 
-  owner       User             @relation("GeofenceOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  subjectUser User             @relation("GeofenceSubject", fields: [subjectUserId], references: [id], onDelete: Cascade)
+  owner       User            @relation("GeofenceOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  subjectUser User            @relation("GeofenceSubject", fields: [subjectUserId], references: [id], onDelete: Cascade)
   events      GeofenceEvent[]
   state       GeofenceState?
 
@@ -630,15 +640,15 @@ model Geofence {
 }
 
 model GeofenceEvent {
-  id          String             @id @default(uuid()) @db.Uuid
-  geofenceId  String             @db.Uuid
-  type        GeofenceEventType
-  latitude    Decimal            @db.Decimal(10, 7)
-  longitude   Decimal            @db.Decimal(10, 7)
-  occurredAt  DateTime           @db.Timestamptz(3)
-  createdAt   DateTime           @default(now()) @db.Timestamptz(3)
-  updatedAt   DateTime           @updatedAt @db.Timestamptz(3)
-  deletedAt   DateTime?          @db.Timestamptz(3)
+  id         String            @id @default(uuid()) @db.Uuid
+  geofenceId String            @db.Uuid
+  type       GeofenceEventType
+  latitude   Decimal           @db.Decimal(10, 7)
+  longitude  Decimal           @db.Decimal(10, 7)
+  occurredAt DateTime          @db.Timestamptz(3)
+  createdAt  DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime          @updatedAt @db.Timestamptz(3)
+  deletedAt  DateTime?         @db.Timestamptz(3)
 
   geofence Geofence @relation(fields: [geofenceId], references: [id], onDelete: Cascade)
 
@@ -647,12 +657,12 @@ model GeofenceEvent {
 }
 
 model GeofenceState {
-  id          String   @id @default(uuid()) @db.Uuid
-  geofenceId  String   @unique @db.Uuid
+  id          String    @id @default(uuid()) @db.Uuid
+  geofenceId  String    @unique @db.Uuid
   isInside    Boolean
-  evaluatedAt DateTime @db.Timestamptz(3)
-  createdAt   DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+  evaluatedAt DateTime  @db.Timestamptz(3)
+  createdAt   DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @db.Timestamptz(3)
   deletedAt   DateTime? @db.Timestamptz(3)
 
   geofence Geofence @relation(fields: [geofenceId], references: [id], onDelete: Cascade)
@@ -689,23 +699,23 @@ model Device {
 }
 
 model Session {
-  id               String        @id @default(uuid()) @db.Uuid
-  userId           String        @db.Uuid
-  deviceId         String        @db.Uuid
-  status           SessionStatus @default(ACTIVE)
+  id                       String        @id @default(uuid()) @db.Uuid
+  userId                   String        @db.Uuid
+  deviceId                 String        @db.Uuid
+  status                   SessionStatus @default(ACTIVE)
   refreshTokenHash         String        @db.VarChar(128)
   previousRefreshTokenHash String?       @db.VarChar(128)
-  tokenFamily             String        @db.Uuid
-  generation       Int           @default(1)
-  ipHash           String?       @db.VarChar(128)
-  userAgent        String?       @db.VarChar(512)
-  lastUsedAt       DateTime      @db.Timestamptz(3)
-  expiresAt        DateTime      @db.Timestamptz(3)
-  revokedAt        DateTime?     @db.Timestamptz(3)
-  revokeReason     String?       @db.VarChar(100)
-  createdAt        DateTime      @default(now()) @db.Timestamptz(3)
-  updatedAt        DateTime      @updatedAt @db.Timestamptz(3)
-  deletedAt        DateTime?     @db.Timestamptz(3)
+  tokenFamily              String        @db.Uuid
+  generation               Int           @default(1)
+  ipHash                   String?       @db.VarChar(128)
+  userAgent                String?       @db.VarChar(512)
+  lastUsedAt               DateTime      @db.Timestamptz(3)
+  expiresAt                DateTime      @db.Timestamptz(3)
+  revokedAt                DateTime?     @db.Timestamptz(3)
+  revokeReason             String?       @db.VarChar(100)
+  createdAt                DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt                DateTime      @updatedAt @db.Timestamptz(3)
+  deletedAt                DateTime?     @db.Timestamptz(3)
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   device Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
@@ -716,20 +726,20 @@ model Session {
 }
 
 model Subscription {
-  id                  String             @id @default(uuid()) @db.Uuid
-  userId              String             @db.Uuid
-  plan                SubscriptionPlan   @default(FREE)
-  status              SubscriptionStatus @default(ACTIVE)
-  provider            String?            @db.VarChar(40)
-  providerCustomerId  String?            @db.VarChar(255)
-  providerSubscriptionId String?         @unique @db.VarChar(255)
-  currentPeriodStart  DateTime?          @db.Timestamptz(3)
-  currentPeriodEnd    DateTime?          @db.Timestamptz(3)
-  cancelAtPeriodEnd   Boolean            @default(false)
-  entitlements        Json               @default("{}")
-  createdAt           DateTime           @default(now()) @db.Timestamptz(3)
-  updatedAt           DateTime           @updatedAt @db.Timestamptz(3)
-  deletedAt           DateTime?          @db.Timestamptz(3)
+  id                     String             @id @default(uuid()) @db.Uuid
+  userId                 String             @db.Uuid
+  plan                   SubscriptionPlan   @default(FREE)
+  status                 SubscriptionStatus @default(ACTIVE)
+  provider               String?            @db.VarChar(40)
+  providerCustomerId     String?            @db.VarChar(255)
+  providerSubscriptionId String?            @unique @db.VarChar(255)
+  currentPeriodStart     DateTime?          @db.Timestamptz(3)
+  currentPeriodEnd       DateTime?          @db.Timestamptz(3)
+  cancelAtPeriodEnd      Boolean            @default(false)
+  entitlements           Json               @default("{}")
+  createdAt              DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt              DateTime           @updatedAt @db.Timestamptz(3)
+  deletedAt              DateTime?          @db.Timestamptz(3)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -738,20 +748,20 @@ model Subscription {
 }
 
 model AuditLog {
-  id           String        @id @default(uuid()) @db.Uuid
-  actorId      String?       @db.Uuid
-  action       String        @db.VarChar(100)
-  entityType   String        @db.VarChar(80)
-  entityId     String?       @db.Uuid
-  severity     AuditSeverity @default(INFO)
-  outcome      String        @db.VarChar(30)
-  metadata     Json?
-  ipHash       String?       @db.VarChar(128)
-  userAgent    String?       @db.VarChar(512)
-  requestId    String?       @db.VarChar(100)
-  createdAt    DateTime      @default(now()) @db.Timestamptz(3)
-  updatedAt    DateTime      @updatedAt @db.Timestamptz(3)
-  deletedAt    DateTime?     @db.Timestamptz(3)
+  id         String        @id @default(uuid()) @db.Uuid
+  actorId    String?       @db.Uuid
+  action     String        @db.VarChar(100)
+  entityType String        @db.VarChar(80)
+  entityId   String?       @db.Uuid
+  severity   AuditSeverity @default(INFO)
+  outcome    String        @db.VarChar(30)
+  metadata   Json?
+  ipHash     String?       @db.VarChar(128)
+  userAgent  String?       @db.VarChar(512)
+  requestId  String?       @db.VarChar(100)
+  createdAt  DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime      @updatedAt @db.Timestamptz(3)
+  deletedAt  DateTime?     @db.Timestamptz(3)
 
   actor User? @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
 
@@ -762,18 +772,18 @@ model AuditLog {
 }
 
 model VerificationChallenge {
-  id          String              @id @default(uuid()) @db.Uuid
-  userId      String              @db.Uuid
-  purpose     VerificationPurpose
+  id               String              @id @default(uuid()) @db.Uuid
+  userId           String              @db.Uuid
+  purpose          VerificationPurpose
   targetHash       String              @db.VarChar(128)
   targetCiphertext Bytes?
-  codeHash    String              @db.VarChar(128)
-  attempts    Int                 @default(0)
-  expiresAt   DateTime            @db.Timestamptz(3)
-  consumedAt  DateTime?           @db.Timestamptz(3)
-  createdAt   DateTime            @default(now()) @db.Timestamptz(3)
-  updatedAt   DateTime            @updatedAt @db.Timestamptz(3)
-  deletedAt   DateTime?           @db.Timestamptz(3)
+  codeHash         String              @db.VarChar(128)
+  attempts         Int                 @default(0)
+  expiresAt        DateTime            @db.Timestamptz(3)
+  consumedAt       DateTime?           @db.Timestamptz(3)
+  createdAt        DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime            @updatedAt @db.Timestamptz(3)
+  deletedAt        DateTime?           @db.Timestamptz(3)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -799,12 +809,12 @@ model AuthIdentity {
 }
 
 model AiConversation {
-  id          String   @id @default(uuid()) @db.Uuid
-  userId      String   @db.Uuid
-  title       String?  @db.VarChar(100)
-  createdAt   DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
-  deletedAt   DateTime? @db.Timestamptz(3)
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  title     String?   @db.VarChar(100)
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @db.Timestamptz(3)
+  deletedAt DateTime? @db.Timestamptz(3)
 
   user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   interactions AiInteraction[]
@@ -814,21 +824,671 @@ model AiConversation {
 }
 
 model AiInteraction {
-  id                   String   @id @default(uuid()) @db.Uuid
-  conversationId       String   @db.Uuid
-  role                 AiRole
-  content              String   @db.Text
-  intent               String?  @db.VarChar(80)
-  model                 String?  @db.VarChar(80)
+  id                    String    @id @default(uuid()) @db.Uuid
+  conversationId        String    @db.Uuid
+  role                  AiRole
+  content               String    @db.Text
+  intent                String?   @db.VarChar(80)
+  model                 String?   @db.VarChar(80)
   promptTokens          Int?
   completionTokens      Int?
-  preciseLocationShared Boolean @default(false)
-  createdAt             DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt             DateTime @updatedAt @db.Timestamptz(3)
+  preciseLocationShared Boolean   @default(false)
+  createdAt             DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime  @updatedAt @db.Timestamptz(3)
   deletedAt             DateTime? @db.Timestamptz(3)
 
   conversation AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@index([conversationId, createdAt])
   @@map("ai_interactions")
+}
+
+enum AdministrativeAreaType {
+  COUNTRY
+  STATE
+  FCT
+  LGA
+  CITY
+  TOWN
+  DISTRICT
+  WARD
+  LOCALITY
+}
+
+enum TransitCoverageStatus {
+  COMING_SOON
+  DATA_COLLECTION
+  BETA
+  VERIFIED
+  SUSPENDED
+}
+
+enum TransitMode {
+  DANFO
+  BRT
+  CITY_BUS
+  KOROPE
+  KEKE
+  SHARED_TAXI
+  INTERCITY_BUS
+  RAIL
+  FERRY
+  WALK
+  OKADA
+  OTHER
+}
+
+enum TransitPlaceType {
+  STOP
+  MOTOR_PARK
+  TERMINAL
+  STATION
+  JUNCTION
+  LANDMARK
+  JETTY
+  PICKUP_POINT
+}
+
+enum TransitRouteScope {
+  URBAN
+  INTERCITY
+  REGIONAL
+}
+
+enum TransitRouteStatus {
+  DRAFT
+  IN_REVIEW
+  PUBLISHED
+  SUSPENDED
+  RETIRED
+}
+
+enum TransitDirection {
+  OUTBOUND
+  INBOUND
+  LOOP
+  BIDIRECTIONAL
+}
+
+enum TransitReviewStatus {
+  PENDING
+  APPROVED
+  CHANGES_REQUESTED
+  REJECTED
+}
+
+enum TransitDataSourceType {
+  FIELD_SURVEY
+  GOVERNMENT_AGENCY
+  TRANSPORT_OPERATOR
+  UNION_PARTNER
+  INTERNAL_RESEARCH
+}
+
+enum TransitImportStatus {
+  UPLOADED
+  VALIDATING
+  NEEDS_CORRECTION
+  READY
+  IMPORTED
+  FAILED
+}
+
+enum TransitJourneyPreference {
+  BALANCED
+  CHEAPEST
+  FASTEST
+  FEWEST_TRANSFERS
+  LEAST_WALKING
+  FORMAL_TRANSIT
+}
+
+enum TransitServiceDay {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+enum TransitFareTimeBand {
+  ANYTIME
+  MORNING_PEAK
+  EVENING_PEAK
+  OFF_PEAK
+  NIGHT
+  WEEKEND
+}
+
+enum TransitDisruptionStatus {
+  SCHEDULED
+  ACTIVE
+  RESOLVED
+  CANCELLED
+}
+
+enum TransitDisruptionSeverity {
+  INFO
+  MINOR
+  MAJOR
+  CRITICAL
+}
+
+enum TransitJourneyStatus {
+  PLANNED
+  ACTIVE
+  COMPLETED
+  CANCELLED
+  EXPIRED
+}
+
+model AdministrativeArea {
+  id             String                 @id @default(uuid()) @db.Uuid
+  parentId       String?                @db.Uuid
+  name           String                 @db.VarChar(120)
+  normalizedName String                 @db.VarChar(120)
+  slug           String                 @unique @db.VarChar(180)
+  code           String?                @unique @db.VarChar(40)
+  type           AdministrativeAreaType
+  countryCode    String                 @default("NG") @db.Char(2)
+  timezone       String                 @default("Africa/Lagos") @db.VarChar(64)
+  latitude       Decimal?               @db.Decimal(10, 7)
+  longitude      Decimal?               @db.Decimal(10, 7)
+  isActive       Boolean                @default(true)
+  createdAt      DateTime               @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime               @updatedAt @db.Timestamptz(3)
+  deletedAt      DateTime?              @db.Timestamptz(3)
+
+  parent      AdministrativeArea?  @relation("AdministrativeAreaHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
+  children    AdministrativeArea[] @relation("AdministrativeAreaHierarchy")
+  coverage    TransitCoverage?
+  dataSources TransitDataSource[]
+  places      TransitPlace[]
+  routes      TransitRoute[]
+  importJobs  TransitImportJob[]
+  disruptions TransitDisruption[]
+
+  @@unique([parentId, normalizedName, type])
+  @@index([parentId, type, deletedAt])
+  @@index([countryCode, type, isActive, deletedAt])
+  @@index([normalizedName])
+  @@map("administrative_areas")
+}
+
+model TransitCoverage {
+  id             String                @id @default(uuid()) @db.Uuid
+  areaId         String                @unique @db.Uuid
+  status         TransitCoverageStatus @default(COMING_SOON)
+  qualityScore   Int                   @default(0)
+  dataVersion    Int                   @default(1)
+  lastSurveyedAt DateTime?             @db.Timestamptz(3)
+  lastVerifiedAt DateTime?             @db.Timestamptz(3)
+  publishedAt    DateTime?             @db.Timestamptz(3)
+  notes          String?               @db.Text
+  createdAt      DateTime              @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime              @updatedAt @db.Timestamptz(3)
+  deletedAt      DateTime?             @db.Timestamptz(3)
+
+  area AdministrativeArea @relation(fields: [areaId], references: [id], onDelete: Cascade)
+
+  @@index([status, deletedAt])
+  @@index([qualityScore, status])
+  @@map("transit_coverages")
+}
+
+model TransitDataSource {
+  id               String                @id @default(uuid()) @db.Uuid
+  areaId           String?               @db.Uuid
+  name             String                @db.VarChar(160)
+  type             TransitDataSourceType
+  organization     String?               @db.VarChar(160)
+  sourceUrl        String?               @db.VarChar(2048)
+  licenseName      String?               @db.VarChar(120)
+  licenseUrl       String?               @db.VarChar(2048)
+  reliabilityScore Int                   @default(50)
+  lastCheckedAt    DateTime?             @db.Timestamptz(3)
+  isActive         Boolean               @default(true)
+  notes            String?               @db.Text
+  createdAt        DateTime              @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime              @updatedAt @db.Timestamptz(3)
+  deletedAt        DateTime?             @db.Timestamptz(3)
+
+  area             AdministrativeArea?      @relation(fields: [areaId], references: [id], onDelete: SetNull)
+  places           TransitPlace[]
+  routes           TransitRoute[]
+  fareObservations TransitFareObservation[]
+  importJobs       TransitImportJob[]
+  disruptions      TransitDisruption[]
+
+  @@index([areaId, type, deletedAt])
+  @@index([isActive, reliabilityScore])
+  @@map("transit_data_sources")
+}
+
+model TransitPlace {
+  id                        String              @id @default(uuid()) @db.Uuid
+  areaId                    String              @db.Uuid
+  sourceId                  String?             @db.Uuid
+  code                      String              @unique @db.VarChar(60)
+  name                      String              @db.VarChar(160)
+  normalizedName            String              @db.VarChar(160)
+  type                      TransitPlaceType
+  latitude                  Decimal             @db.Decimal(10, 7)
+  longitude                 Decimal             @db.Decimal(10, 7)
+  locationAccuracyM         Decimal?            @db.Decimal(8, 2)
+  geohash                   String?             @db.VarChar(12)
+  address                   String?             @db.VarChar(300)
+  landmarkDescription       String?             @db.Text
+  defaultBoardingDirections String?             @db.Text
+  isWheelchairAccessible    Boolean?
+  verificationStatus        TransitReviewStatus @default(PENDING)
+  verifiedAt                DateTime?           @db.Timestamptz(3)
+  isActive                  Boolean             @default(true)
+  createdAt                 DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt                 DateTime            @updatedAt @db.Timestamptz(3)
+  deletedAt                 DateTime?           @db.Timestamptz(3)
+
+  area                     AdministrativeArea       @relation(fields: [areaId], references: [id], onDelete: Restrict)
+  source                   TransitDataSource?       @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  aliases                  TransitPlaceAlias[]
+  modes                    TransitPlaceMode[]
+  originRoutes             TransitRoute[]           @relation("TransitRouteOrigin")
+  destinationRoutes        TransitRoute[]           @relation("TransitRouteDestination")
+  routeStops               TransitRouteStop[]
+  fareObservationsFrom     TransitFareObservation[] @relation("TransitFareFromPlace")
+  fareObservationsTo       TransitFareObservation[] @relation("TransitFareToPlace")
+  disruptions              TransitDisruption[]
+  savedJourneyOrigins      SavedTransitJourney[]    @relation("SavedJourneyOrigin")
+  savedJourneyDestinations SavedTransitJourney[]    @relation("SavedJourneyDestination")
+  journeyLegsFrom          SavedTransitJourneyLeg[] @relation("SavedJourneyLegFrom")
+  journeyLegsTo            SavedTransitJourneyLeg[] @relation("SavedJourneyLegTo")
+
+  @@index([areaId, type, isActive, deletedAt])
+  @@index([areaId, normalizedName, deletedAt])
+  @@index([normalizedName])
+  @@index([geohash])
+  @@index([latitude, longitude])
+  @@index([verificationStatus, isActive])
+  @@map("transit_places")
+}
+
+model TransitPlaceAlias {
+  id              String    @id @default(uuid()) @db.Uuid
+  placeId         String    @db.Uuid
+  alias           String    @db.VarChar(160)
+  normalizedAlias String    @db.VarChar(160)
+  locale          String    @default("en-NG") @db.VarChar(16)
+  isPrimary       Boolean   @default(false)
+  createdAt       DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @db.Timestamptz(3)
+  deletedAt       DateTime? @db.Timestamptz(3)
+
+  place TransitPlace @relation(fields: [placeId], references: [id], onDelete: Cascade)
+
+  @@unique([placeId, normalizedAlias, locale])
+  @@index([normalizedAlias, locale, deletedAt])
+  @@index([placeId, isPrimary, deletedAt])
+  @@map("transit_place_aliases")
+}
+
+model TransitPlaceMode {
+  id               String      @id @default(uuid()) @db.Uuid
+  placeId          String      @db.Uuid
+  mode             TransitMode
+  boardingAllowed  Boolean     @default(true)
+  alightingAllowed Boolean     @default(true)
+  operatingNotes   String?     @db.Text
+  createdAt        DateTime    @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime    @updatedAt @db.Timestamptz(3)
+  deletedAt        DateTime?   @db.Timestamptz(3)
+
+  place TransitPlace @relation(fields: [placeId], references: [id], onDelete: Cascade)
+
+  @@unique([placeId, mode])
+  @@index([mode, boardingAllowed, deletedAt])
+  @@index([placeId, deletedAt])
+  @@map("transit_place_modes")
+}
+
+model TransitRoute {
+  id                 String             @id @default(uuid()) @db.Uuid
+  areaId             String             @db.Uuid
+  sourceId           String?            @db.Uuid
+  createdById        String             @db.Uuid
+  publishedById      String?            @db.Uuid
+  originPlaceId      String             @db.Uuid
+  destinationPlaceId String             @db.Uuid
+  currentRevisionId  String?            @unique @db.Uuid
+  code               String             @unique @db.VarChar(80)
+  name               String             @db.VarChar(180)
+  normalizedName     String             @db.VarChar(180)
+  scope              TransitRouteScope
+  mode               TransitMode
+  status             TransitRouteStatus @default(DRAFT)
+  direction          TransitDirection
+  destinationSign    String?            @db.VarChar(180)
+  operatorName       String?            @db.VarChar(180)
+  publicDescription  String?            @db.Text
+  boardingSummary    String?            @db.Text
+  durationMinMinutes Int?
+  durationMaxMinutes Int?
+  dataVersion        Int                @default(1)
+  confidenceScore    Int                @default(0)
+  lastVerifiedAt     DateTime?          @db.Timestamptz(3)
+  submittedAt        DateTime?          @db.Timestamptz(3)
+  publishedAt        DateTime?          @db.Timestamptz(3)
+  retiredAt          DateTime?          @db.Timestamptz(3)
+  createdAt          DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime           @updatedAt @db.Timestamptz(3)
+  deletedAt          DateTime?          @db.Timestamptz(3)
+
+  area             AdministrativeArea       @relation(fields: [areaId], references: [id], onDelete: Restrict)
+  source           TransitDataSource?       @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  createdBy        User                     @relation("TransitRouteCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  publishedBy      User?                    @relation("TransitRoutePublisher", fields: [publishedById], references: [id], onDelete: SetNull)
+  originPlace      TransitPlace             @relation("TransitRouteOrigin", fields: [originPlaceId], references: [id], onDelete: Restrict)
+  destinationPlace TransitPlace             @relation("TransitRouteDestination", fields: [destinationPlaceId], references: [id], onDelete: Restrict)
+  stops            TransitRouteStop[]
+  segments         TransitSegment[]
+  serviceWindows   TransitServiceWindow[]
+  fareObservations TransitFareObservation[]
+  currentRevision  TransitRouteRevision?    @relation("TransitRouteCurrentRevision", fields: [currentRevisionId], references: [id], onDelete: SetNull)
+  revisions        TransitRouteRevision[]   @relation("TransitRouteRevisionHistory")
+  disruptions      TransitDisruption[]
+  journeyLegs      SavedTransitJourneyLeg[]
+
+  @@index([areaId, status, mode, deletedAt])
+  @@index([originPlaceId, destinationPlaceId, status])
+  @@index([normalizedName])
+  @@index([createdById, status, updatedAt])
+  @@index([publishedAt, status])
+  @@map("transit_routes")
+}
+
+model TransitRouteStop {
+  id                    String    @id @default(uuid()) @db.Uuid
+  routeId               String    @db.Uuid
+  placeId               String    @db.Uuid
+  stopOrder             Int
+  platformName          String?   @db.VarChar(120)
+  pickupAllowed         Boolean   @default(true)
+  dropoffAllowed        Boolean   @default(true)
+  isTimingPoint         Boolean   @default(false)
+  boardingInstructions  String?   @db.Text
+  alightingInstructions String?   @db.Text
+  averageDwellSeconds   Int?
+  distanceFromStartM    Int?
+  createdAt             DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime  @updatedAt @db.Timestamptz(3)
+  deletedAt             DateTime? @db.Timestamptz(3)
+
+  route            TransitRoute     @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  place            TransitPlace     @relation(fields: [placeId], references: [id], onDelete: Restrict)
+  outgoingSegments TransitSegment[] @relation("TransitSegmentFromStop")
+  incomingSegments TransitSegment[] @relation("TransitSegmentToStop")
+
+  @@unique([routeId, stopOrder])
+  @@index([placeId, routeId, deletedAt])
+  @@index([routeId, pickupAllowed, dropoffAllowed])
+  @@map("transit_route_stops")
+}
+
+model TransitSegment {
+  id                 String    @id @default(uuid()) @db.Uuid
+  routeId            String    @db.Uuid
+  fromStopId         String    @db.Uuid
+  toStopId           String    @db.Uuid
+  segmentOrder       Int
+  distanceM          Int?
+  durationMinMinutes Int?
+  durationMaxMinutes Int?
+  fareMinKobo        Int?
+  fareMaxKobo        Int?
+  roadDescription    String?   @db.Text
+  createdAt          DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime  @updatedAt @db.Timestamptz(3)
+  deletedAt          DateTime? @db.Timestamptz(3)
+
+  route    TransitRoute     @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  fromStop TransitRouteStop @relation("TransitSegmentFromStop", fields: [fromStopId], references: [id], onDelete: Cascade)
+  toStop   TransitRouteStop @relation("TransitSegmentToStop", fields: [toStopId], references: [id], onDelete: Cascade)
+
+  @@unique([routeId, segmentOrder])
+  @@unique([routeId, fromStopId, toStopId])
+  @@index([fromStopId, toStopId])
+  @@index([routeId, deletedAt])
+  @@map("transit_segments")
+}
+
+model TransitServiceWindow {
+  id                  String            @id @default(uuid()) @db.Uuid
+  routeId             String            @db.Uuid
+  day                 TransitServiceDay
+  startMinute         Int
+  endMinute           Int
+  endsNextDay         Boolean           @default(false)
+  frequencyMinMinutes Int?
+  frequencyMaxMinutes Int?
+  isApproximate       Boolean           @default(true)
+  notes               String?           @db.Text
+  createdAt           DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime          @updatedAt @db.Timestamptz(3)
+  deletedAt           DateTime?         @db.Timestamptz(3)
+
+  route TransitRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
+
+  @@unique([routeId, day, startMinute, endMinute])
+  @@index([routeId, day, deletedAt])
+  @@index([day, startMinute, endMinute])
+  @@map("transit_service_windows")
+}
+
+model TransitFareObservation {
+  id              String              @id @default(uuid()) @db.Uuid
+  routeId         String              @db.Uuid
+  sourceId        String              @db.Uuid
+  recordedById    String              @db.Uuid
+  fromPlaceId     String?             @db.Uuid
+  toPlaceId       String?             @db.Uuid
+  amountMinKobo   Int
+  amountMaxKobo   Int
+  currencyCode    String              @default("NGN") @db.Char(3)
+  timeBand        TransitFareTimeBand @default(ANYTIME)
+  confidenceScore Int                 @default(50)
+  observedAt      DateTime            @db.Timestamptz(3)
+  validUntil      DateTime?           @db.Timestamptz(3)
+  evidenceFileKey String?             @db.VarChar(512)
+  notes           String?             @db.Text
+  createdAt       DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime            @updatedAt @db.Timestamptz(3)
+  deletedAt       DateTime?           @db.Timestamptz(3)
+
+  route      TransitRoute      @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  source     TransitDataSource @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+  recordedBy User              @relation("TransitFareRecorder", fields: [recordedById], references: [id], onDelete: Restrict)
+  fromPlace  TransitPlace?     @relation("TransitFareFromPlace", fields: [fromPlaceId], references: [id], onDelete: SetNull)
+  toPlace    TransitPlace?     @relation("TransitFareToPlace", fields: [toPlaceId], references: [id], onDelete: SetNull)
+
+  @@index([routeId, observedAt(sort: Desc), deletedAt])
+  @@index([fromPlaceId, toPlaceId, observedAt(sort: Desc)])
+  @@index([sourceId, observedAt(sort: Desc)])
+  @@index([validUntil, confidenceScore])
+  @@map("transit_fare_observations")
+}
+
+model TransitRouteRevision {
+  id            String    @id @default(uuid()) @db.Uuid
+  routeId       String    @db.Uuid
+  createdById   String    @db.Uuid
+  version       Int
+  snapshot      Json
+  checksum      String    @db.VarChar(128)
+  changeSummary String?   @db.Text
+  submittedAt   DateTime? @db.Timestamptz(3)
+  createdAt     DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime  @updatedAt @db.Timestamptz(3)
+  deletedAt     DateTime? @db.Timestamptz(3)
+
+  route           TransitRoute         @relation("TransitRouteRevisionHistory", fields: [routeId], references: [id], onDelete: Cascade)
+  createdBy       User                 @relation("TransitRevisionCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  reviews         TransitRouteReview[]
+  currentForRoute TransitRoute?        @relation("TransitRouteCurrentRevision")
+
+  @@unique([routeId, version])
+  @@index([routeId, createdAt(sort: Desc)])
+  @@index([createdById, submittedAt])
+  @@index([checksum])
+  @@map("transit_route_revisions")
+}
+
+model TransitRouteReview {
+  id         String              @id @default(uuid()) @db.Uuid
+  revisionId String              @db.Uuid
+  reviewerId String              @db.Uuid
+  status     TransitReviewStatus @default(PENDING)
+  notes      String?             @db.Text
+  reviewedAt DateTime?           @db.Timestamptz(3)
+  createdAt  DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime            @updatedAt @db.Timestamptz(3)
+  deletedAt  DateTime?           @db.Timestamptz(3)
+
+  revision TransitRouteRevision @relation(fields: [revisionId], references: [id], onDelete: Cascade)
+  reviewer User                 @relation("TransitRouteReviewer", fields: [reviewerId], references: [id], onDelete: Restrict)
+
+  @@unique([revisionId, reviewerId])
+  @@index([reviewerId, status, createdAt])
+  @@index([revisionId, status, deletedAt])
+  @@map("transit_route_reviews")
+}
+
+model TransitImportJob {
+  id               String              @id @default(uuid()) @db.Uuid
+  areaId           String              @db.Uuid
+  sourceId         String?             @db.Uuid
+  createdById      String              @db.Uuid
+  status           TransitImportStatus @default(UPLOADED)
+  originalFileName String              @db.VarChar(255)
+  fileKey          String              @db.VarChar(512)
+  checksum         String              @db.VarChar(128)
+  totalRows        Int                 @default(0)
+  validRows        Int                 @default(0)
+  invalidRows      Int                 @default(0)
+  importedRows     Int                 @default(0)
+  errorReportKey   String?             @db.VarChar(512)
+  startedAt        DateTime?           @db.Timestamptz(3)
+  completedAt      DateTime?           @db.Timestamptz(3)
+  createdAt        DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime            @updatedAt @db.Timestamptz(3)
+  deletedAt        DateTime?           @db.Timestamptz(3)
+
+  area      AdministrativeArea @relation(fields: [areaId], references: [id], onDelete: Restrict)
+  source    TransitDataSource? @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  createdBy User               @relation("TransitImportCreator", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([areaId, status, createdAt(sort: Desc)])
+  @@index([createdById, status])
+  @@index([checksum])
+  @@map("transit_import_jobs")
+}
+
+model TransitDisruption {
+  id            String                    @id @default(uuid()) @db.Uuid
+  areaId        String                    @db.Uuid
+  routeId       String?                   @db.Uuid
+  placeId       String?                   @db.Uuid
+  sourceId      String?                   @db.Uuid
+  publishedById String                    @db.Uuid
+  status        TransitDisruptionStatus
+  severity      TransitDisruptionSeverity @default(INFO)
+  title         String                    @db.VarChar(180)
+  description   String                    @db.Text
+  startsAt      DateTime                  @db.Timestamptz(3)
+  endsAt        DateTime?                 @db.Timestamptz(3)
+  publishedAt   DateTime?                 @db.Timestamptz(3)
+  resolvedAt    DateTime?                 @db.Timestamptz(3)
+  createdAt     DateTime                  @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime                  @updatedAt @db.Timestamptz(3)
+  deletedAt     DateTime?                 @db.Timestamptz(3)
+
+  area        AdministrativeArea @relation(fields: [areaId], references: [id], onDelete: Restrict)
+  route       TransitRoute?      @relation(fields: [routeId], references: [id], onDelete: SetNull)
+  place       TransitPlace?      @relation(fields: [placeId], references: [id], onDelete: SetNull)
+  source      TransitDataSource? @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  publishedBy User               @relation("TransitDisruptionPublisher", fields: [publishedById], references: [id], onDelete: Restrict)
+
+  @@index([areaId, status, startsAt, endsAt])
+  @@index([routeId, status, deletedAt])
+  @@index([placeId, status, deletedAt])
+  @@index([severity, status, startsAt])
+  @@map("transit_disruptions")
+}
+
+model SavedTransitJourney {
+  id                      String                   @id @default(uuid()) @db.Uuid
+  userId                  String                   @db.Uuid
+  originPlaceId           String?                  @db.Uuid
+  destinationPlaceId      String?                  @db.Uuid
+  originLabel             String                   @db.VarChar(180)
+  destinationLabel        String                   @db.VarChar(180)
+  preference              TransitJourneyPreference @default(BALANCED)
+  status                  TransitJourneyStatus     @default(PLANNED)
+  totalFareMinKobo        Int?
+  totalFareMaxKobo        Int?
+  totalDurationMinMinutes Int?
+  totalDurationMaxMinutes Int?
+  transferCount           Int                      @default(0)
+  walkingDistanceM        Int                      @default(0)
+  plannedAt               DateTime                 @db.Timestamptz(3)
+  startedAt               DateTime?                @db.Timestamptz(3)
+  completedAt             DateTime?                @db.Timestamptz(3)
+  expiresAt               DateTime?                @db.Timestamptz(3)
+  createdAt               DateTime                 @default(now()) @db.Timestamptz(3)
+  updatedAt               DateTime                 @updatedAt @db.Timestamptz(3)
+  deletedAt               DateTime?                @db.Timestamptz(3)
+
+  user             User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  originPlace      TransitPlace?            @relation("SavedJourneyOrigin", fields: [originPlaceId], references: [id], onDelete: SetNull)
+  destinationPlace TransitPlace?            @relation("SavedJourneyDestination", fields: [destinationPlaceId], references: [id], onDelete: SetNull)
+  legs             SavedTransitJourneyLeg[]
+
+  @@index([userId, status, plannedAt(sort: Desc), deletedAt])
+  @@index([originPlaceId, destinationPlaceId])
+  @@index([expiresAt, status])
+  @@map("saved_transit_journeys")
+}
+
+model SavedTransitJourneyLeg {
+  id                 String      @id @default(uuid()) @db.Uuid
+  journeyId          String      @db.Uuid
+  routeId            String?     @db.Uuid
+  fromPlaceId        String?     @db.Uuid
+  toPlaceId          String?     @db.Uuid
+  legOrder           Int
+  mode               TransitMode
+  fromLabel          String      @db.VarChar(180)
+  toLabel            String      @db.VarChar(180)
+  destinationSign    String?     @db.VarChar(180)
+  instructions       String      @db.Text
+  fareMinKobo        Int?
+  fareMaxKobo        Int?
+  durationMinMinutes Int?
+  durationMaxMinutes Int?
+  distanceM          Int?
+  routeDataVersion   Int?
+  createdAt          DateTime    @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime    @updatedAt @db.Timestamptz(3)
+  deletedAt          DateTime?   @db.Timestamptz(3)
+
+  journey   SavedTransitJourney @relation(fields: [journeyId], references: [id], onDelete: Cascade)
+  route     TransitRoute?       @relation(fields: [routeId], references: [id], onDelete: SetNull)
+  fromPlace TransitPlace?       @relation("SavedJourneyLegFrom", fields: [fromPlaceId], references: [id], onDelete: SetNull)
+  toPlace   TransitPlace?       @relation("SavedJourneyLegTo", fields: [toPlaceId], references: [id], onDelete: SetNull)
+
+  @@unique([journeyId, legOrder])
+  @@index([routeId, routeDataVersion])
+  @@index([fromPlaceId, toPlaceId])
+  @@index([journeyId, deletedAt])
+  @@map("saved_transit_journey_legs")
 }

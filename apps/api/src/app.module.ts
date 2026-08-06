@@ -18,6 +18,7 @@ import { LocationsModule } from './modules/locations/locations.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { SafetyModule } from './modules/safety/safety.module';
 import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
+import { TransitModule } from './modules/transit/transit.module';
 import { TripsModule } from './modules/trips/trips.module';
 import { UsersModule } from './modules/users/users.module';
 import { RealtimeModule } from './realtime/realtime.module';
@@ -45,6 +46,7 @@ import { RealtimeModule } from './realtime/realtime.module';
     NotificationsModule,
     AiModule,
     SubscriptionsModule,
+    TransitModule,
     HealthModule,
   ],
   providers: [
