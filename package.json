@@ -39,7 +39,7 @@
     "react-native-worklets": "0.10.1"
   },
   "devDependencies": {
-    "@eslint/js": "^9.32.0",
+    "@eslint/js": "^10.0.1",
     "@types/node": "^24.1.0",
     "eslint": "^9.32.0",
     "eslint-plugin-react-hooks": "^6.0.0",
