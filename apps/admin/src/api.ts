@@ -55,6 +55,44 @@ export interface RouteItem {
   _count: { stops: number; segments: number; revisions: number };
 }
 
+export interface RouteDetails extends RouteItem {
+  destinationSign: string | null;
+  currentRevisionId: string | null;
+  stops: Array<{
+    id: string;
+    placeId: string;
+    stopOrder: number;
+    platformName: string | null;
+    pickupAllowed: boolean;
+    dropoffAllowed: boolean;
+    boardingInstructions: string | null;
+    alightingInstructions: string | null;
+    place: PlaceItem;
+  }>;
+  segments: Array<{
+    id: string;
+    fromStopId: string;
+    toStopId: string;
+    segmentOrder: number;
+    durationMinMinutes: number | null;
+    durationMaxMinutes: number | null;
+    distanceM: number | null;
+    fareMinKobo: number | null;
+    fareMaxKobo: number | null;
+    roadDescription: string | null;
+  }>;
+  serviceWindows: Array<{
+    id: string;
+    day: string;
+    startMinute: number;
+    endMinute: number;
+    endsNextDay: boolean;
+    frequencyMinMinutes: number | null;
+    frequencyMaxMinutes: number | null;
+    isApproximate: boolean;
+  }>;
+}
+
 export interface RevisionItem {
   id: string;
   version: number;

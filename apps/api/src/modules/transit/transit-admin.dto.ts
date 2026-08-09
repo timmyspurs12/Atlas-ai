@@ -1,7 +1,9 @@
 import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
+  ArrayMinSize,
   IsArray,
+  IsBoolean,
   IsDateString,
   IsEnum,
   IsInt,
@@ -12,13 +14,17 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateNested,
 } from 'class-validator';
 import {
+  TransitDirection,
   TransitDisruptionSeverity,
   TransitMode,
   TransitPlaceType,
   TransitReviewStatus,
+  TransitRouteScope,
   TransitRouteStatus,
+  TransitServiceDay,
 } from '../../generated/prisma/client';
 
 export class TransitAdminListDto {
@@ -202,6 +208,186 @@ export class CreateTransitDisruptionDto {
   @IsOptional()
   @IsDateString()
   endsAt?: string;
+}
+
+export class CreateTransitRouteDto {
+  @IsUUID()
+  areaId: string;
+
+  @IsOptional()
+  @IsUUID()
+  sourceId?: string;
+
+  @IsUUID()
+  originPlaceId: string;
+
+  @IsUUID()
+  destinationPlaceId: string;
+
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim().toUpperCase() : value,
+  )
+  @IsString()
+  @MaxLength(80)
+  code: string;
+
+  @IsString()
+  @MaxLength(180)
+  name: string;
+
+  @IsEnum(TransitRouteScope)
+  scope: TransitRouteScope;
+
+  @IsEnum(TransitMode)
+  mode: TransitMode;
+
+  @IsEnum(TransitDirection)
+  direction: TransitDirection;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(180)
+  destinationSign?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(180)
+  operatorName?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2_000)
+  publicDescription?: string;
+}
+
+export class TransitGraphStopDto {
+  @IsUUID()
+  placeId: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  platformName?: string;
+
+  @IsBoolean()
+  pickupAllowed = true;
+
+  @IsBoolean()
+  dropoffAllowed = true;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2_000)
+  boardingInstructions?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2_000)
+  alightingInstructions?: string;
+}
+
+export class TransitGraphSegmentDto {
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  fromStopOrder: number;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  toStopOrder: number;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(1_440)
+  durationMinMinutes: number;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(1_440)
+  durationMaxMinutes: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  distanceM?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  fareMinKobo?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  fareMaxKobo?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2_000)
+  roadDescription?: string;
+}
+
+export class TransitServiceWindowDto {
+  @IsEnum(TransitServiceDay)
+  day: TransitServiceDay;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(1_439)
+  startMinute: number;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(1_439)
+  endMinute: number;
+
+  @IsBoolean()
+  endsNextDay = false;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  frequencyMinMinutes?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  frequencyMaxMinutes?: number;
+
+  @IsBoolean()
+  isApproximate = true;
+}
+
+export class SaveTransitRouteGraphDto {
+  @IsArray()
+  @ArrayMinSize(2)
+  @ArrayMaxSize(200)
+  @ValidateNested({ each: true })
+  @Type(() => TransitGraphStopDto)
+  stops: TransitGraphStopDto[];
+
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(250)
+  @ValidateNested({ each: true })
+  @Type(() => TransitGraphSegmentDto)
+  segments: TransitGraphSegmentDto[];
+
+  @IsArray()
+  @ArrayMaxSize(30)
+  @ValidateNested({ each: true })
+  @Type(() => TransitServiceWindowDto)
+  serviceWindows: TransitServiceWindowDto[] = [];
 }
 
 export class ValidateTransitCsvDto {

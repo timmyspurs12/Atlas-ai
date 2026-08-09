@@ -19,8 +19,10 @@ import {
   CreateTransitDisruptionDto,
   CreateTransitFareDto,
   CreateTransitPlaceDto,
+  CreateTransitRouteDto,
   ReviewTransitFareDto,
   ReviewTransitPlaceDto,
+  SaveTransitRouteGraphDto,
   TransitAdminListDto,
   ValidateTransitCsvDto,
 } from './transit-admin.dto';
@@ -69,6 +71,33 @@ export class TransitAdminController {
   @Roles(...adminRoles)
   routes(@Query() input: TransitAdminListDto): ReturnType<TransitAdminService['listRoutes']> {
     return this.admin.listRoutes(input);
+  }
+
+  @Get('routes/:routeId')
+  @Roles(...adminRoles)
+  routeDetails(
+    @Param('routeId', new ParseUUIDPipe()) routeId: string,
+  ): ReturnType<TransitAdminService['routeDetails']> {
+    return this.admin.routeDetails(routeId);
+  }
+
+  @Post('routes')
+  @Roles(UserRole.TRANSIT_EDITOR, UserRole.SUPER_ADMIN)
+  createRoute(
+    @CurrentUser() principal: AuthPrincipal,
+    @Body() input: CreateTransitRouteDto,
+  ): ReturnType<TransitAdminService['createRoute']> {
+    return this.admin.createRoute(principal.userId, input);
+  }
+
+  @Post('routes/:routeId/graph')
+  @Roles(UserRole.TRANSIT_EDITOR, UserRole.SUPER_ADMIN)
+  saveRouteGraph(
+    @CurrentUser() principal: AuthPrincipal,
+    @Param('routeId', new ParseUUIDPipe()) routeId: string,
+    @Body() input: SaveTransitRouteGraphDto,
+  ): ReturnType<TransitAdminService['saveRouteGraph']> {
+    return this.admin.saveRouteGraph(principal.userId, routeId, input);
   }
 
   @Get('revisions/pending')

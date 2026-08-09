@@ -11,6 +11,7 @@ import {
   type RevisionItem,
   type RouteItem,
 } from './api';
+import { RouteEditor } from './RouteEditor';
 
 type Tab = 'review' | 'places' | 'routes' | 'imports';
 
@@ -101,6 +102,7 @@ export default function App() {
   );
   const [areaId, setAreaId] = useState('');
   const [csvResult, setCsvResult] = useState<Record<string, unknown> | null>(null);
+  const [editingRouteId, setEditingRouteId] = useState<string | null>(null);
   const reviewer =
     session?.user.role === 'TRANSIT_REVIEWER' || session?.user.role === 'SUPER_ADMIN';
   const editor = session?.user.role === 'TRANSIT_EDITOR' || session?.user.role === 'SUPER_ADMIN';
@@ -370,6 +372,11 @@ export default function App() {
                 <div className="actions">
                   <span className={`status ${route.status.toLowerCase()}`}>{route.status}</span>
                   {editor && route.status === 'DRAFT' ? (
+                    <button className="secondary" onClick={() => setEditingRouteId(route.id)}>
+                      Edit graph
+                    </button>
+                  ) : null}
+                  {editor && route.status === 'DRAFT' ? (
                     <button
                       className="primary compact"
                       onClick={() =>
@@ -442,6 +449,14 @@ export default function App() {
           </section>
         ) : null}
       </main>
+      {editingRouteId ? (
+        <RouteEditor
+          routeId={editingRouteId}
+          places={places}
+          onClose={() => setEditingRouteId(null)}
+          onSaved={load}
+        />
+      ) : null}
     </div>
   );
 }
