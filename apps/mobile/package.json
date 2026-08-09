@@ -52,7 +52,7 @@
     "expo-web-browser": "*",
     "lucide-react-native": "^0.536.0",
     "react": "19.2.3",
-    "react-dom": "19.2.3",
+    "react-dom": "19.2.8",
     "react-hook-form": "^7.62.0",
     "react-native": "0.86.2",
     "react-native-gesture-handler": "~2.32.0",
