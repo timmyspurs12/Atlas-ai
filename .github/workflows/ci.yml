@@ -29,7 +29,8 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
-      - run: npm audit --audit-level=high
+      - name: Enforce npm security policy
+        run: node scripts/audit-ci.mjs
       - run: npm run build --workspace @atlas/api
       - run: npm run build --workspace @atlas/admin
       - name: Validate Expo configuration
