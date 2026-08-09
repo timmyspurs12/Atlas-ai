@@ -31,6 +31,7 @@ jobs:
       - run: npm test
       - run: npm audit --audit-level=high
       - run: npm run build --workspace @atlas/api
+      - run: npm run build --workspace @atlas/admin
       - name: Validate Expo configuration
         working-directory: apps/mobile
         run: npx expo-doctor
@@ -38,8 +39,10 @@ jobs:
         run: npm run build --workspace @atlas/mobile
       - uses: actions/upload-artifact@v4
         with:
-          name: atlas-web-export
-          path: apps/mobile/dist
+          name: atlas-web-exports
+          path: |
+            apps/mobile/dist
+            apps/admin/dist
           retention-days: 7
 
   api-container:
