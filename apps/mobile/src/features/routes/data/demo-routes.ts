@@ -1,0 +1,107 @@
+import type { TransitJourney } from '../services/routes-service';
+
+export const DEMO_ORIGIN = {
+  id: '20000000-0000-4000-8000-000000000001',
+  name: 'Ikeja (demo)',
+};
+
+export const DEMO_DESTINATION = {
+  id: '20000000-0000-4000-8000-000000000002',
+  name: 'Ajah (demo)',
+};
+
+export const DEMO_TRANSIT_JOURNEYS: TransitJourney[] = [
+  {
+    id: 'demo-budget',
+    preference: 'CHEAPEST',
+    originPlaceId: DEMO_ORIGIN.id,
+    destinationPlaceId: DEMO_DESTINATION.id,
+    transferCount: 1,
+    totalDurationMinMinutes: 75,
+    totalDurationMaxMinutes: 110,
+    totalFareMinKobo: 130_000,
+    totalFareMaxKobo: 180_000,
+    walkingDistanceM: 420,
+    hasUnknownFare: false,
+    legs: [
+      {
+        routeId: 'demo-route-a',
+        routeCode: 'DEMO-A',
+        routeName: 'Illustrative mainland connector',
+        routeDataVersion: 1,
+        mode: 'CITY_BUS',
+        fromPlaceId: DEMO_ORIGIN.id,
+        fromLabel: 'Ikeja demo boarding point',
+        toPlaceId: '20000000-0000-4000-8000-000000000003',
+        toLabel: 'Demo interchange',
+        destinationSign: 'Demo interchange sign',
+        instructions: [
+          'Illustrative instruction only. Confirm the real loading point with a verified operator.',
+        ],
+        stopCount: 1,
+        durationMinMinutes: 35,
+        durationMaxMinutes: 50,
+        fareMinKobo: 50_000,
+        fareMaxKobo: 70_000,
+        distanceM: 18_000,
+      },
+      {
+        routeId: 'demo-route-b',
+        routeCode: 'DEMO-B',
+        routeName: 'Illustrative island connector',
+        routeDataVersion: 1,
+        mode: 'CITY_BUS',
+        fromPlaceId: '20000000-0000-4000-8000-000000000003',
+        fromLabel: 'Demo interchange',
+        toPlaceId: DEMO_DESTINATION.id,
+        toLabel: 'Ajah demo arrival point',
+        destinationSign: 'Ajah demo sign',
+        instructions: [
+          'Illustrative instruction only. This leg is not approved for real travel guidance.',
+        ],
+        stopCount: 1,
+        durationMinMinutes: 35,
+        durationMaxMinutes: 50,
+        fareMinKobo: 80_000,
+        fareMaxKobo: 110_000,
+        distanceM: 24_000,
+      },
+    ],
+  },
+  {
+    id: 'demo-fast',
+    preference: 'FASTEST',
+    originPlaceId: DEMO_ORIGIN.id,
+    destinationPlaceId: DEMO_DESTINATION.id,
+    transferCount: 0,
+    totalDurationMinMinutes: 60,
+    totalDurationMaxMinutes: 90,
+    totalFareMinKobo: 190_000,
+    totalFareMaxKobo: 250_000,
+    walkingDistanceM: 600,
+    hasUnknownFare: false,
+    legs: [
+      {
+        routeId: 'demo-route-fast',
+        routeCode: 'DEMO-FAST',
+        routeName: 'Illustrative direct service',
+        routeDataVersion: 1,
+        mode: 'CITY_BUS',
+        fromPlaceId: DEMO_ORIGIN.id,
+        fromLabel: 'Ikeja demo boarding point',
+        toPlaceId: DEMO_DESTINATION.id,
+        toLabel: 'Ajah demo arrival point',
+        destinationSign: 'Ajah demo sign',
+        instructions: [
+          'Illustrative direct option. Check live, verified transit data before travelling.',
+        ],
+        stopCount: 1,
+        durationMinMinutes: 60,
+        durationMaxMinutes: 90,
+        fareMinKobo: 190_000,
+        fareMaxKobo: 250_000,
+        distanceM: 42_000,
+      },
+    ],
+  },
+];

@@ -7,6 +7,7 @@ coverage/
 .env.*
 !.env.example
 *.log
+*.tsbuildinfo
 .DS_Store
 apps/api/src/generated/
 apps/api/prisma/dev.db
@@ -17,15 +18,3 @@ ios/
 *.p8
 *.p12
 *.mobileprovision
-
-# TypeScript artifacts accidentally emitted beside configuration files
-apps/api/prisma/*.js
-apps/api/prisma/*.js.map
-apps/api/prisma/*.d.ts
-apps/api/prisma/*.d.ts.map
-apps/api/*.config.js
-apps/api/*.config.js.map
-apps/api/*.config.mjs
-apps/api/*.config.mjs.map
-apps/api/*.config.d.ts
-apps/api/*.config.d.mts

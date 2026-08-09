@@ -248,7 +248,12 @@ async function upsertTransitTeamUser(input: {
 }) {
   return prisma.user.upsert({
     where: { email: input.email },
-    update: { role: input.role, status: 'ACTIVE', deletedAt: null },
+    update: {
+      role: input.role,
+      status: 'ACTIVE',
+      passwordHash: input.passwordHash,
+      deletedAt: null,
+    },
     create: {
       email: input.email,
       passwordHash: input.passwordHash,
