@@ -56,6 +56,8 @@ export interface RouteItem {
 }
 
 export interface RouteDetails extends RouteItem {
+  revisionId?: string;
+  revisionVersion?: number;
   destinationSign: string | null;
   currentRevisionId: string | null;
   stops: Array<{

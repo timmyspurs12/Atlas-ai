@@ -106,7 +106,10 @@ export default function App() {
   );
   const [areaId, setAreaId] = useState('');
   const [csvResult, setCsvResult] = useState<Record<string, unknown> | null>(null);
-  const [editingRouteId, setEditingRouteId] = useState<string | null>(null);
+  const [editingRoute, setEditingRoute] = useState<{
+    routeId: string;
+    revisionId?: string;
+  } | null>(null);
   const reviewer =
     session?.user.role === 'TRANSIT_REVIEWER' || session?.user.role === 'SUPER_ADMIN';
   const editor = session?.user.role === 'TRANSIT_EDITOR' || session?.user.role === 'SUPER_ADMIN';
@@ -162,6 +165,22 @@ export default function App() {
       setCoverageMetrics((current) => ({ ...current, [areaId]: metrics }));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Coverage metrics failed.');
+    }
+  };
+
+  const createRouteRevision = async (routeId: string): Promise<void> => {
+    setError(null);
+    try {
+      const revision = await request<{ revisionId: string }>(
+        `/transit/editor/routes/${routeId}/revisions/draft`,
+        {
+          method: 'POST',
+          body: { changeSummary: 'Working revision created in Transit Operations.' },
+        },
+      );
+      setEditingRoute({ routeId, revisionId: revision.revisionId });
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Unable to create revision.');
     }
   };
 
@@ -401,8 +420,19 @@ export default function App() {
                 </div>
                 <div className="actions">
                   <span className={`status ${route.status.toLowerCase()}`}>{route.status}</span>
+                  {editor && route.status === 'PUBLISHED' ? (
+                    <button
+                      className="secondary"
+                      onClick={() => void createRouteRevision(route.id)}
+                    >
+                      Create new version
+                    </button>
+                  ) : null}
                   {editor && route.status === 'DRAFT' ? (
-                    <button className="secondary" onClick={() => setEditingRouteId(route.id)}>
+                    <button
+                      className="secondary"
+                      onClick={() => setEditingRoute({ routeId: route.id })}
+                    >
                       Edit graph
                     </button>
                   ) : null}
@@ -540,11 +570,12 @@ export default function App() {
           </section>
         ) : null}
       </main>
-      {editingRouteId ? (
+      {editingRoute ? (
         <RouteEditor
-          routeId={editingRouteId}
+          routeId={editingRoute.routeId}
+          revisionId={editingRoute.revisionId}
           places={places}
-          onClose={() => setEditingRouteId(null)}
+          onClose={() => setEditingRoute(null)}
           onSaved={load}
         />
       ) : null}

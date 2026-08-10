@@ -19,6 +19,7 @@ interface EditableSegment {
 
 interface Props {
   routeId: string;
+  revisionId?: string;
   places: PlaceItem[];
   onClose: () => void;
   onSaved: () => Promise<void>;
@@ -33,7 +34,7 @@ const emptySegment = (): EditableSegment => ({
   roadDescription: '',
 });
 
-export function RouteEditor({ routeId, places, onClose, onSaved }: Props) {
+export function RouteEditor({ routeId, revisionId, places, onClose, onSaved }: Props) {
   const [route, setRoute] = useState<RouteDetails | null>(null);
   const [stops, setStops] = useState<EditableStop[]>([]);
   const [segments, setSegments] = useState<EditableSegment[]>([]);
@@ -45,7 +46,10 @@ export function RouteEditor({ routeId, places, onClose, onSaved }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    void request<RouteDetails>(`/transit/admin/routes/${routeId}`)
+    const detailsPath = revisionId
+      ? `/transit/editor/revisions/${revisionId}`
+      : `/transit/admin/routes/${routeId}`;
+    void request<RouteDetails>(detailsPath)
       .then((data) => {
         setRoute(data);
         const initialStops =
@@ -99,7 +103,7 @@ export function RouteEditor({ routeId, places, onClose, onSaved }: Props) {
       .catch((caught: unknown) => {
         setError(caught instanceof Error ? caught.message : 'Unable to load route.');
       });
-  }, [routeId]);
+  }, [revisionId, routeId]);
 
   const placeById = useMemo(() => new Map(places.map((place) => [place.id, place])), [places]);
 
@@ -146,13 +150,16 @@ export function RouteEditor({ routeId, places, onClose, onSaved }: Props) {
     setSegments((current) => current.slice(0, -1));
   };
 
-  const save = async (): Promise<void> => {
+  const save = async (submitAfterSave = false): Promise<void> => {
     if (!route) return;
     setSaving(true);
     setError(null);
     try {
       const weekdays = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
-      await request(`/transit/admin/routes/${route.id}/graph`, {
+      const graphPath = revisionId
+        ? `/transit/editor/revisions/${revisionId}/graph`
+        : `/transit/admin/routes/${route.id}/graph`;
+      await request(graphPath, {
         method: 'POST',
         body: {
           stops: stops.map((stop) => ({
@@ -185,6 +192,11 @@ export function RouteEditor({ routeId, places, onClose, onSaved }: Props) {
           })),
         },
       });
+      if (submitAfterSave && revisionId) {
+        await request(`/transit/editor/revisions/${revisionId}/submit`, {
+          method: 'POST',
+        });
+      }
       await onSaved();
       onClose();
     } catch (caught) {
@@ -210,7 +222,9 @@ export function RouteEditor({ routeId, places, onClose, onSaved }: Props) {
       <section className="route-editor">
         <header className="editor-header">
           <div>
-            <p className="eyebrow">DRAFT ROUTE GRAPH</p>
+            <p className="eyebrow">
+              {revisionId ? `PRIVATE REVISION ${route.revisionVersion ?? ''}` : 'DRAFT ROUTE GRAPH'}
+            </p>
             <h2>{route.name}</h2>
             <span>
               {route.code} · {route.mode}
@@ -220,7 +234,7 @@ export function RouteEditor({ routeId, places, onClose, onSaved }: Props) {
             Close
           </button>
         </header>
-        {route.currentRevisionId ? (
+        {route.currentRevisionId && !revisionId ? (
           <div className="alert error">
             Published routes are immutable. Create a new draft revision before editing.
           </div>
@@ -443,14 +457,25 @@ export function RouteEditor({ routeId, places, onClose, onSaved }: Props) {
           </div>
         </div>
         <footer className="editor-footer">
-          <p>Saving keeps the route private. Submit it separately for independent review.</p>
-          <button
-            className="primary"
-            disabled={saving || Boolean(route.currentRevisionId)}
-            onClick={() => void save()}
-          >
-            {saving ? 'Saving…' : 'Save draft graph'}
-          </button>
+          <p>
+            {revisionId
+              ? 'The currently published route stays live until this revision is approved.'
+              : 'Saving keeps the route private. Submit it separately for independent review.'}
+          </p>
+          <div className="actions">
+            <button
+              className="secondary"
+              disabled={saving || (!revisionId && Boolean(route.currentRevisionId))}
+              onClick={() => void save(false)}
+            >
+              {saving ? 'Saving…' : 'Save draft'}
+            </button>
+            {revisionId ? (
+              <button className="primary" disabled={saving} onClick={() => void save(true)}>
+                Save and submit
+              </button>
+            ) : null}
+          </div>
         </footer>
       </section>
     </div>
