@@ -16,13 +16,16 @@ import {
   UserStatus,
 } from '../../generated/prisma/client';
 import { validateTransitCsv, type TransitCsvValidationResult } from './domain/transit-csv';
+import { transitGraphValidationErrors } from './domain/transit-graph.policy';
 import {
   AdminReviewDecisionDto,
   type CreateTransitDisruptionDto,
   type CreateTransitFareDto,
   type CreateTransitPlaceDto,
+  type CreateTransitRouteDto,
   type ReviewTransitFareDto,
   type ReviewTransitPlaceDto,
+  type SaveTransitRouteGraphDto,
   type TransitAdminListDto,
   type ValidateTransitCsvDto,
 } from './transit-admin.dto';
@@ -128,6 +131,266 @@ export class TransitAdminService {
       take: input.limit,
     });
     return { data };
+  }
+
+  async routeDetails(routeId: string): Promise<Record<string, unknown>> {
+    const route = await this.prisma.transitRoute.findFirst({
+      where: { id: routeId, deletedAt: null },
+      include: {
+        area: { select: { id: true, name: true } },
+        originPlace: true,
+        destinationPlace: true,
+        stops: {
+          where: { deletedAt: null },
+          orderBy: { stopOrder: 'asc' },
+          include: { place: true },
+        },
+        segments: { where: { deletedAt: null }, orderBy: { segmentOrder: 'asc' } },
+        serviceWindows: {
+          where: { deletedAt: null },
+          orderBy: [{ day: 'asc' }, { startMinute: 'asc' }],
+        },
+      },
+    });
+    if (!route) throw new NotFoundException('Transit route not found');
+    return route;
+  }
+
+  async createRoute(
+    actorId: string,
+    input: CreateTransitRouteDto,
+  ): Promise<Record<string, unknown>> {
+    if (input.originPlaceId === input.destinationPlaceId && input.direction !== 'LOOP') {
+      throw new BadRequestException('Origin and destination must be different');
+    }
+    try {
+      return await this.prisma.$transaction(async (transaction) => {
+        const actor = await this.requireActor(transaction, actorId, [
+          UserRole.TRANSIT_EDITOR,
+          UserRole.SUPER_ADMIN,
+        ]);
+        const [area, places] = await Promise.all([
+          transaction.administrativeArea.findFirst({
+            where: { id: input.areaId, isActive: true, deletedAt: null },
+            select: { id: true },
+          }),
+          transaction.transitPlace.findMany({
+            where: {
+              id: { in: [input.originPlaceId, input.destinationPlaceId] },
+              isActive: true,
+              deletedAt: null,
+            },
+            select: { id: true },
+          }),
+        ]);
+        if (
+          !area ||
+          places.length !== new Set([input.originPlaceId, input.destinationPlaceId]).size
+        ) {
+          throw new NotFoundException('Route area or endpoint place was not found');
+        }
+        const route = await transaction.transitRoute.create({
+          data: {
+            areaId: area.id,
+            sourceId: input.sourceId,
+            createdById: actor.id,
+            originPlaceId: input.originPlaceId,
+            destinationPlaceId: input.destinationPlaceId,
+            code: input.code,
+            name: input.name.trim(),
+            normalizedName: this.normalize(input.name),
+            scope: input.scope,
+            mode: input.mode,
+            status: TransitRouteStatus.DRAFT,
+            direction: input.direction,
+            destinationSign: input.destinationSign?.trim(),
+            operatorName: input.operatorName?.trim(),
+            publicDescription: input.publicDescription?.trim(),
+          },
+        });
+        await transaction.auditLog.create({
+          data: {
+            actorId: actor.id,
+            action: 'TRANSIT_ROUTE_CREATED',
+            entityType: 'TransitRoute',
+            entityId: route.id,
+            severity: 'INFO',
+            outcome: 'SUCCESS',
+            metadata: { code: route.code, areaId: route.areaId },
+          },
+        });
+        return route;
+      });
+    } catch (error) {
+      if (this.isUniqueViolation(error))
+        throw new ConflictException('Transit route code already exists');
+      throw error;
+    }
+  }
+
+  async saveRouteGraph(
+    actorId: string,
+    routeId: string,
+    input: SaveTransitRouteGraphDto,
+  ): Promise<Record<string, unknown>> {
+    const graphErrors = transitGraphValidationErrors(input);
+    if (graphErrors[0]) throw new BadRequestException(graphErrors[0]);
+    return this.prisma.$transaction(async (transaction) => {
+      const actor = await this.requireActor(transaction, actorId, [
+        UserRole.TRANSIT_EDITOR,
+        UserRole.SUPER_ADMIN,
+      ]);
+      const route = await transaction.transitRoute.findFirst({
+        where: { id: routeId, deletedAt: null },
+        include: {
+          revisions: {
+            where: {
+              submittedAt: { not: null },
+              deletedAt: null,
+              reviews: {
+                none: {
+                  status: {
+                    in: [
+                      TransitReviewStatus.APPROVED,
+                      TransitReviewStatus.REJECTED,
+                      TransitReviewStatus.CHANGES_REQUESTED,
+                    ],
+                  },
+                  deletedAt: null,
+                },
+              },
+            },
+          },
+        },
+      });
+      if (!route) throw new NotFoundException('Transit route not found');
+      if (route.createdById !== actor.id && actor.role !== UserRole.SUPER_ADMIN) {
+        throw new ForbiddenException('Editors may modify only routes assigned to them');
+      }
+      if (route.currentRevisionId || route.status === TransitRouteStatus.PUBLISHED) {
+        throw new ConflictException('Published routes are immutable; create a new draft revision');
+      }
+      if (route.status === TransitRouteStatus.IN_REVIEW || route.revisions.length > 0) {
+        throw new ConflictException('A submitted route cannot be edited until review finishes');
+      }
+      const placeIds = [...new Set(input.stops.map((stop) => stop.placeId))];
+      const places = await transaction.transitPlace.findMany({
+        where: { id: { in: placeIds }, isActive: true, deletedAt: null },
+        select: { id: true },
+      });
+      if (places.length !== placeIds.length) {
+        throw new BadRequestException('One or more route stops are unavailable');
+      }
+      if (input.stops[0]?.placeId !== route.originPlaceId) {
+        throw new BadRequestException('The first stop must match the route origin');
+      }
+      if (route.direction !== 'LOOP' && input.stops.at(-1)?.placeId !== route.destinationPlaceId) {
+        throw new BadRequestException('The final stop must match the route destination');
+      }
+
+      await transaction.transitSegment.deleteMany({ where: { routeId: route.id } });
+      await transaction.transitServiceWindow.deleteMany({ where: { routeId: route.id } });
+      const savedStops: Array<{ id: string }> = [];
+      for (const [stopOrder, stop] of input.stops.entries()) {
+        const saved = await transaction.transitRouteStop.upsert({
+          where: { routeId_stopOrder: { routeId: route.id, stopOrder } },
+          create: {
+            routeId: route.id,
+            placeId: stop.placeId,
+            stopOrder,
+            platformName: stop.platformName?.trim(),
+            pickupAllowed: stop.pickupAllowed,
+            dropoffAllowed: stop.dropoffAllowed,
+            boardingInstructions: stop.boardingInstructions?.trim(),
+            alightingInstructions: stop.alightingInstructions?.trim(),
+          },
+          update: {
+            placeId: stop.placeId,
+            platformName: stop.platformName?.trim() || null,
+            pickupAllowed: stop.pickupAllowed,
+            dropoffAllowed: stop.dropoffAllowed,
+            boardingInstructions: stop.boardingInstructions?.trim() || null,
+            alightingInstructions: stop.alightingInstructions?.trim() || null,
+            deletedAt: null,
+          },
+        });
+        savedStops.push(saved);
+      }
+      await transaction.transitRouteStop.updateMany({
+        where: { routeId: route.id, stopOrder: { gte: input.stops.length }, deletedAt: null },
+        data: { deletedAt: new Date() },
+      });
+      const segmentData = input.segments.map((segment, segmentOrder) => {
+        const fromStop = savedStops[segment.fromStopOrder];
+        const toStop = savedStops[segment.toStopOrder];
+        if (!fromStop || !toStop) {
+          throw new BadRequestException('Segment references an unavailable stop order');
+        }
+        return {
+          routeId: route.id,
+          fromStopId: fromStop.id,
+          toStopId: toStop.id,
+          segmentOrder,
+          durationMinMinutes: segment.durationMinMinutes,
+          durationMaxMinutes: segment.durationMaxMinutes,
+          distanceM: segment.distanceM,
+          fareMinKobo: segment.fareMinKobo,
+          fareMaxKobo: segment.fareMaxKobo,
+          roadDescription: segment.roadDescription?.trim(),
+        };
+      });
+      await transaction.transitSegment.createMany({ data: segmentData });
+      if (input.serviceWindows.length > 0) {
+        await transaction.transitServiceWindow.createMany({
+          data: input.serviceWindows.map((window) => ({
+            routeId: route.id,
+            day: window.day,
+            startMinute: window.startMinute,
+            endMinute: window.endMinute,
+            endsNextDay: window.endsNextDay,
+            frequencyMinMinutes: window.frequencyMinMinutes,
+            frequencyMaxMinutes: window.frequencyMaxMinutes,
+            isApproximate: window.isApproximate,
+          })),
+        });
+      }
+      const durationMinMinutes = input.segments.reduce(
+        (total, segment) => total + segment.durationMinMinutes,
+        0,
+      );
+      const durationMaxMinutes = input.segments.reduce(
+        (total, segment) => total + segment.durationMaxMinutes,
+        0,
+      );
+      await transaction.transitRoute.update({
+        where: { id: route.id },
+        data: { durationMinMinutes, durationMaxMinutes, status: TransitRouteStatus.DRAFT },
+      });
+      await transaction.auditLog.create({
+        data: {
+          actorId: actor.id,
+          action: 'TRANSIT_ROUTE_GRAPH_UPDATED',
+          entityType: 'TransitRoute',
+          entityId: route.id,
+          severity: 'INFO',
+          outcome: 'SUCCESS',
+          metadata: {
+            stops: input.stops.length,
+            segments: input.segments.length,
+            serviceWindows: input.serviceWindows.length,
+          },
+        },
+      });
+      return {
+        routeId: route.id,
+        status: TransitRouteStatus.DRAFT,
+        stopCount: input.stops.length,
+        segmentCount: input.segments.length,
+        serviceWindowCount: input.serviceWindows.length,
+        durationMinMinutes,
+        durationMaxMinutes,
+      };
+    });
   }
 
   async pendingRevisions(limit = 50): Promise<Record<string, unknown>> {

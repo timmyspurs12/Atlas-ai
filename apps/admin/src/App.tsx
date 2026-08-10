@@ -6,13 +6,16 @@ import {
   login,
   request,
   type AdminSession,
+  type CoverageItem,
+  type CoverageMetrics,
   type Overview,
   type PlaceItem,
   type RevisionItem,
   type RouteItem,
 } from './api';
+import { RouteEditor } from './RouteEditor';
 
-type Tab = 'review' | 'places' | 'routes' | 'imports';
+type Tab = 'review' | 'places' | 'routes' | 'coverage' | 'imports';
 
 const initialOverview: Overview = {
   pendingPlaces: 0,
@@ -93,6 +96,8 @@ export default function App() {
   const [places, setPlaces] = useState<PlaceItem[]>([]);
   const [routes, setRoutes] = useState<RouteItem[]>([]);
   const [revisions, setRevisions] = useState<RevisionItem[]>([]);
+  const [coverages, setCoverages] = useState<CoverageItem[]>([]);
+  const [coverageMetrics, setCoverageMetrics] = useState<Record<string, CoverageMetrics>>({});
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -101,6 +106,7 @@ export default function App() {
   );
   const [areaId, setAreaId] = useState('');
   const [csvResult, setCsvResult] = useState<Record<string, unknown> | null>(null);
+  const [editingRouteId, setEditingRouteId] = useState<string | null>(null);
   const reviewer =
     session?.user.role === 'TRANSIT_REVIEWER' || session?.user.role === 'SUPER_ADMIN';
   const editor = session?.user.role === 'TRANSIT_EDITOR' || session?.user.role === 'SUPER_ADMIN';
@@ -110,14 +116,16 @@ export default function App() {
     setLoading(true);
     setError(null);
     try {
-      const [overviewData, placeData, routeData] = await Promise.all([
+      const [overviewData, placeData, routeData, coverageData] = await Promise.all([
         request<Overview>('/transit/admin/overview'),
         request<{ data: PlaceItem[] }>('/transit/admin/places?limit=100'),
         request<{ data: RouteItem[] }>('/transit/admin/routes?limit=100'),
+        request<{ data: CoverageItem[] }>('/transit/admin/coverage'),
       ]);
       setOverview(overviewData);
       setPlaces(placeData.data);
       setRoutes(routeData.data);
+      setCoverages(coverageData.data);
       if (reviewer) {
         const revisionData = await request<{ data: RevisionItem[] }>(
           '/transit/admin/revisions/pending?limit=100',
@@ -148,6 +156,30 @@ export default function App() {
     }
   };
 
+  const inspectCoverage = async (areaId: string): Promise<void> => {
+    try {
+      const metrics = await request<CoverageMetrics>(`/transit/admin/coverage/${areaId}/metrics`);
+      setCoverageMetrics((current) => ({ ...current, [areaId]: metrics }));
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Coverage metrics failed.');
+    }
+  };
+
+  const promoteCoverage = async (areaId: string): Promise<void> => {
+    await act(
+      () =>
+        request(`/transit/admin/coverage/${areaId}/review`, {
+          method: 'POST',
+          body: {
+            status: 'BETA',
+            lastSurveyedAt: new Date().toISOString(),
+            notes: 'Local development coverage review.',
+          },
+        }),
+      'Coverage promoted to beta.',
+    );
+  };
+
   if (!session) return <Login onSignedIn={setSession} />;
 
   const cards = [
@@ -168,7 +200,7 @@ export default function App() {
           </div>
         </div>
         <nav>
-          {(['review', 'places', 'routes', 'imports'] as Tab[]).map((item) => (
+          {(['review', 'places', 'routes', 'coverage', 'imports'] as Tab[]).map((item) => (
             <button
               key={item}
               className={tab === item ? 'active' : ''}
@@ -370,6 +402,11 @@ export default function App() {
                 <div className="actions">
                   <span className={`status ${route.status.toLowerCase()}`}>{route.status}</span>
                   {editor && route.status === 'DRAFT' ? (
+                    <button className="secondary" onClick={() => setEditingRouteId(route.id)}>
+                      Edit graph
+                    </button>
+                  ) : null}
+                  {editor && route.status === 'DRAFT' ? (
                     <button
                       className="primary compact"
                       onClick={() =>
@@ -391,6 +428,67 @@ export default function App() {
                 </div>
               </article>
             ))}
+          </section>
+        ) : null}
+
+        {tab === 'coverage' ? (
+          <section className="panel">
+            <div className="panel-heading">
+              <div>
+                <h2>Coverage publication</h2>
+                <p>Areas stay private until their quality gate passes.</p>
+              </div>
+              <span className="badge">
+                {coverages.filter((coverage) => coverage.status !== 'COMING_SOON').length} active
+              </span>
+            </div>
+            {coverages
+              .filter(
+                (coverage) =>
+                  coverage.status !== 'COMING_SOON' || coverage.area.slug.startsWith('ng-lagos'),
+              )
+              .map((coverage) => {
+                const metrics = coverageMetrics[coverage.areaId];
+                return (
+                  <article className="row coverage-row" key={coverage.id}>
+                    <div>
+                      <strong>{coverage.area.name}</strong>
+                      <span>
+                        {coverage.area.type} · quality {coverage.qualityScore}/100 · version{' '}
+                        {coverage.dataVersion}
+                      </span>
+                      {metrics ? (
+                        <small>
+                          {metrics.approvedPlaceCount} approved places ·{' '}
+                          {metrics.completeRouteCount}/{metrics.publishedRouteCount} complete routes
+                          · confidence {metrics.lowestRouteConfidence ?? 0}
+                        </small>
+                      ) : (
+                        <small>Inspect metrics before promotion.</small>
+                      )}
+                    </div>
+                    <div className="actions">
+                      <span className={`status ${coverage.status.toLowerCase()}`}>
+                        {coverage.status}
+                      </span>
+                      <button
+                        className="secondary"
+                        onClick={() => void inspectCoverage(coverage.areaId)}
+                      >
+                        Inspect
+                      </button>
+                      {reviewer && coverage.status === 'DATA_COLLECTION' ? (
+                        <button
+                          className="approve"
+                          onClick={() => void promoteCoverage(coverage.areaId)}
+                        >
+                          Promote to beta
+                        </button>
+                      ) : null}
+                    </div>
+                  </article>
+                );
+              })}
           </section>
         ) : null}
 
@@ -442,6 +540,14 @@ export default function App() {
           </section>
         ) : null}
       </main>
+      {editingRouteId ? (
+        <RouteEditor
+          routeId={editingRouteId}
+          places={places}
+          onClose={() => setEditingRouteId(null)}
+          onSaved={load}
+        />
+      ) : null}
     </div>
   );
 }
