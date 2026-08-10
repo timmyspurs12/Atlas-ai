@@ -93,6 +93,34 @@ export interface RouteDetails extends RouteItem {
   }>;
 }
 
+export interface CoverageItem {
+  id: string;
+  areaId: string;
+  status: string;
+  qualityScore: number;
+  dataVersion: number;
+  lastSurveyedAt: string | null;
+  lastVerifiedAt: string | null;
+  area: {
+    id: string;
+    parentId: string | null;
+    name: string;
+    slug: string;
+    code: string | null;
+    type: string;
+  };
+}
+
+export interface CoverageMetrics {
+  approvedPlaceCount: number;
+  publishedRouteCount: number;
+  completeRouteCount: number;
+  freshFareRouteCount: number;
+  lowestRouteConfidence: number | null;
+  staleRouteCount: number;
+  lastSurveyedAt: string | null;
+}
+
 export interface RevisionItem {
   id: string;
   version: number;

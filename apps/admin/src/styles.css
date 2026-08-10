@@ -336,7 +336,9 @@ header h1 {
   flex-wrap: wrap;
 }
 .status.approved,
-.status.published {
+.status.published,
+.status.beta,
+.status.verified {
   color: #166534;
   background: #dcfce7;
 }
