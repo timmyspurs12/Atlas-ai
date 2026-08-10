@@ -142,6 +142,23 @@ function harness() {
       ),
     },
     transitRouteReview: { create: reviewCreate },
+    transitPlace: { count: vi.fn(() => Promise.resolve(2)) },
+    transitSegment: {
+      deleteMany: vi.fn(() => Promise.resolve({ count: 1 })),
+      createMany: vi.fn(() => Promise.resolve({ count: 1 })),
+    },
+    transitServiceWindow: {
+      deleteMany: vi.fn(() => Promise.resolve({ count: 0 })),
+      createMany: vi.fn(() => Promise.resolve({ count: 0 })),
+    },
+    transitRouteStop: {
+      upsert: vi.fn(({ where }: { where: { routeId_stopOrder: { stopOrder: number } } }) =>
+        Promise.resolve({
+          id: where.routeId_stopOrder.stopOrder === 0 ? 'stop-origin' : 'stop-destination',
+        }),
+      ),
+      updateMany: vi.fn(() => Promise.resolve({ count: 0 })),
+    },
     auditLog: { create: vi.fn(() => Promise.resolve({ id: 'audit-1' })) },
   };
   const prisma = {

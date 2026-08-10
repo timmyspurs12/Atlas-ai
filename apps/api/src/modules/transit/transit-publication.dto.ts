@@ -1,5 +1,12 @@
 import { IsEnum, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 
+export class CreateTransitRouteRevisionDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  changeSummary?: string;
+}
+
 export class SubmitTransitRouteDto {
   @IsOptional()
   @IsString()

@@ -1,10 +1,15 @@
-import { Body, Controller, Param, ParseUUIDPipe, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../generated/prisma/client';
 import type { AuthPrincipal } from '../auth/auth.types';
-import { ReviewTransitRouteDto, SubmitTransitRouteDto } from './transit-publication.dto';
+import { SaveTransitRouteGraphDto } from './transit-admin.dto';
+import {
+  CreateTransitRouteRevisionDto,
+  ReviewTransitRouteDto,
+  SubmitTransitRouteDto,
+} from './transit-publication.dto';
 import { TransitPublicationService } from './transit-publication.service';
 
 @ApiTags('Transit publication')
@@ -12,6 +17,45 @@ import { TransitPublicationService } from './transit-publication.service';
 @Controller('transit')
 export class TransitPublicationController {
   constructor(private readonly publication: TransitPublicationService) {}
+
+  @Post('editor/routes/:routeId/revisions/draft')
+  @Roles(UserRole.TRANSIT_EDITOR, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Clone a published route into a private working revision' })
+  createWorkingRevision(
+    @CurrentUser() principal: AuthPrincipal,
+    @Param('routeId', new ParseUUIDPipe()) routeId: string,
+    @Body() input: CreateTransitRouteRevisionDto,
+  ): ReturnType<TransitPublicationService['createWorkingRevision']> {
+    return this.publication.createWorkingRevision(principal.userId, routeId, input);
+  }
+
+  @Get('editor/revisions/:revisionId')
+  @Roles(UserRole.TRANSIT_EDITOR, UserRole.SUPER_ADMIN)
+  workingRevisionDetails(
+    @CurrentUser() principal: AuthPrincipal,
+    @Param('revisionId', new ParseUUIDPipe()) revisionId: string,
+  ): ReturnType<TransitPublicationService['workingRevisionDetails']> {
+    return this.publication.workingRevisionDetails(principal.userId, revisionId);
+  }
+
+  @Post('editor/revisions/:revisionId/graph')
+  @Roles(UserRole.TRANSIT_EDITOR, UserRole.SUPER_ADMIN)
+  updateWorkingRevisionGraph(
+    @CurrentUser() principal: AuthPrincipal,
+    @Param('revisionId', new ParseUUIDPipe()) revisionId: string,
+    @Body() input: SaveTransitRouteGraphDto,
+  ): ReturnType<TransitPublicationService['updateWorkingRevisionGraph']> {
+    return this.publication.updateWorkingRevisionGraph(principal.userId, revisionId, input);
+  }
+
+  @Post('editor/revisions/:revisionId/submit')
+  @Roles(UserRole.TRANSIT_EDITOR, UserRole.SUPER_ADMIN)
+  submitWorkingRevision(
+    @CurrentUser() principal: AuthPrincipal,
+    @Param('revisionId', new ParseUUIDPipe()) revisionId: string,
+  ): ReturnType<TransitPublicationService['submitWorkingRevision']> {
+    return this.publication.submitWorkingRevision(principal.userId, revisionId);
+  }
 
   @Post('editor/routes/:routeId/submit')
   @Roles(UserRole.TRANSIT_EDITOR, UserRole.SUPER_ADMIN)
