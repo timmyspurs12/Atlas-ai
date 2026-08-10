@@ -221,6 +221,11 @@ model User {
   transitImportJobs           TransitImportJob[]       @relation("TransitImportCreator")
   transitDisruptionsPublished TransitDisruption[]      @relation("TransitDisruptionPublisher")
   savedTransitJourneys        SavedTransitJourney[]
+  callSessionsInitiated       CallSafetySession[]      @relation("CallSessionInitiator")
+  callParticipations          CallParticipant[]
+  callInvitationsReceived     CallInvitation[]         @relation("CallInvitationRecipient")
+  callLocationUpdates         CallSessionLocation[]
+  callEvents                  CallSessionEvent[]       @relation("CallEventActor")
 
   @@index([status, deletedAt])
   @@map("users")
@@ -1491,4 +1496,183 @@ model SavedTransitJourneyLeg {
   @@index([fromPlaceId, toPlaceId])
   @@index([journeyId, deletedAt])
   @@map("saved_transit_journey_legs")
+}
+
+enum CallSessionMode {
+  PSTN_COMPANION
+  ATLAS_VOIP
+}
+
+enum CallSessionStatus {
+  PENDING
+  ACTIVE
+  ENDED
+  EXPIRED
+  CANCELLED
+}
+
+enum CallParticipantRole {
+  INITIATOR
+  INVITEE
+}
+
+enum CallInvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+  REVOKED
+}
+
+enum CallConsentStatus {
+  NOT_GRANTED
+  ACTIVE
+  PAUSED
+  REVOKED
+  EXPIRED
+}
+
+enum CallSessionEventType {
+  CREATED
+  INVITED
+  ACCEPTED
+  DECLINED
+  CONSENT_GRANTED
+  CONSENT_REVOKED
+  LOCATION_STARTED
+  LOCATION_STOPPED
+  CALL_LAUNCHED
+  SESSION_ENDED
+  SESSION_EXPIRED
+}
+
+model CallSafetySession {
+  id             String            @id @default(uuid()) @db.Uuid
+  initiatorId    String            @db.Uuid
+  mode           CallSessionMode   @default(PSTN_COMPANION)
+  status         CallSessionStatus @default(PENDING)
+  mutualRequired Boolean           @default(true)
+  startsAt       DateTime?         @db.Timestamptz(3)
+  expiresAt      DateTime          @db.Timestamptz(3)
+  endedAt        DateTime?         @db.Timestamptz(3)
+  createdAt      DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime          @updatedAt @db.Timestamptz(3)
+  deletedAt      DateTime?         @db.Timestamptz(3)
+
+  initiator    User                  @relation("CallSessionInitiator", fields: [initiatorId], references: [id], onDelete: Cascade)
+  participants CallParticipant[]
+  invitation   CallInvitation?
+  locations    CallSessionLocation[]
+  events       CallSessionEvent[]
+
+  @@index([initiatorId, status, expiresAt])
+  @@index([status, expiresAt, deletedAt])
+  @@map("call_safety_sessions")
+}
+
+model CallParticipant {
+  id        String              @id @default(uuid()) @db.Uuid
+  sessionId String              @db.Uuid
+  userId    String              @db.Uuid
+  role      CallParticipantRole
+  joinedAt  DateTime?           @db.Timestamptz(3)
+  leftAt    DateTime?           @db.Timestamptz(3)
+  createdAt DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime            @updatedAt @db.Timestamptz(3)
+  deletedAt DateTime?           @db.Timestamptz(3)
+
+  session CallSafetySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  consent CallConsent?
+
+  @@unique([sessionId, userId])
+  @@unique([sessionId, role])
+  @@index([userId, createdAt(sort: Desc), deletedAt])
+  @@map("call_participants")
+}
+
+model CallConsent {
+  id            String            @id @default(uuid()) @db.Uuid
+  participantId String            @unique @db.Uuid
+  status        CallConsentStatus @default(NOT_GRANTED)
+  precision     LocationPrecision @default(PRECISE)
+  shareBattery  Boolean           @default(false)
+  shareSpeed    Boolean           @default(false)
+  policyVersion String            @db.VarChar(20)
+  grantedAt     DateTime?         @db.Timestamptz(3)
+  expiresAt     DateTime          @db.Timestamptz(3)
+  revokedAt     DateTime?         @db.Timestamptz(3)
+  createdAt     DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime          @updatedAt @db.Timestamptz(3)
+  deletedAt     DateTime?         @db.Timestamptz(3)
+
+  participant CallParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+
+  @@index([status, expiresAt, deletedAt])
+  @@map("call_consents")
+}
+
+model CallInvitation {
+  id            String               @id @default(uuid()) @db.Uuid
+  sessionId     String               @unique @db.Uuid
+  invitedUserId String               @db.Uuid
+  tokenHash     String               @unique @db.VarChar(128)
+  status        CallInvitationStatus @default(PENDING)
+  expiresAt     DateTime             @db.Timestamptz(3)
+  acceptedAt    DateTime?            @db.Timestamptz(3)
+  declinedAt    DateTime?            @db.Timestamptz(3)
+  createdAt     DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime             @updatedAt @db.Timestamptz(3)
+  deletedAt     DateTime?            @db.Timestamptz(3)
+
+  session     CallSafetySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  invitedUser User              @relation("CallInvitationRecipient", fields: [invitedUserId], references: [id], onDelete: Cascade)
+
+  @@index([invitedUserId, status, expiresAt])
+  @@map("call_invitations")
+}
+
+model CallSessionLocation {
+  id         String    @id @default(uuid()) @db.Uuid
+  sessionId  String    @db.Uuid
+  userId     String    @db.Uuid
+  latitude   Decimal   @db.Decimal(10, 7)
+  longitude  Decimal   @db.Decimal(10, 7)
+  accuracyM  Decimal   @db.Decimal(8, 2)
+  headingDeg Decimal?  @db.Decimal(6, 2)
+  speedMps   Decimal?  @db.Decimal(7, 2)
+  batteryPct Int?
+  sequence   BigInt
+  recordedAt DateTime  @db.Timestamptz(3)
+  purgeAt    DateTime  @db.Timestamptz(3)
+  createdAt  DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime  @updatedAt @db.Timestamptz(3)
+  deletedAt  DateTime? @db.Timestamptz(3)
+
+  session CallSafetySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, userId, sequence])
+  @@index([sessionId, userId, recordedAt(sort: Desc)])
+  @@index([purgeAt, deletedAt])
+  @@map("call_session_locations")
+}
+
+model CallSessionEvent {
+  id         String               @id @default(uuid()) @db.Uuid
+  sessionId  String               @db.Uuid
+  actorId    String?              @db.Uuid
+  type       CallSessionEventType
+  metadata   Json?
+  occurredAt DateTime             @db.Timestamptz(3)
+  createdAt  DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime             @updatedAt @db.Timestamptz(3)
+  deletedAt  DateTime?            @db.Timestamptz(3)
+
+  session CallSafetySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  actor   User?             @relation("CallEventActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([sessionId, occurredAt])
+  @@index([actorId, occurredAt(sort: Desc)])
+  @@map("call_session_events")
 }
