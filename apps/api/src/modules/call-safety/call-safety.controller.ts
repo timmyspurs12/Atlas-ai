@@ -18,13 +18,17 @@ import {
   CreateCallSafetySessionDto,
   GrantCallConsentDto,
 } from './call-safety.dto';
+import { CallSafetyGateway } from './call-safety.gateway';
 import { CallSafetyService } from './call-safety.service';
 
 @ApiTags('Stay With Me')
 @ApiBearerAuth()
 @Controller('call-safety')
 export class CallSafetyController {
-  constructor(private readonly service: CallSafetyService) {}
+  constructor(
+    private readonly service: CallSafetyService,
+    private readonly gateway: CallSafetyGateway,
+  ) {}
 
   @Post('sessions')
   @Throttle({ default: { limit: 10, ttl: 60 * 60_000 } })
@@ -46,50 +50,59 @@ export class CallSafetyController {
   }
 
   @Post('invitations/:token/accept')
-  accept(@CurrentUser() user: AuthPrincipal, @Param('token') token: string) {
-    return this.service.accept(user.userId, token);
+  async accept(@CurrentUser() user: AuthPrincipal, @Param('token') token: string) {
+    const result = await this.service.accept(user.userId, token);
+    this.gateway.notify(result.sessionId, 'invitation:accepted', result);
+    return result;
   }
 
   @Post('invitations/:token/decline')
   @HttpCode(HttpStatus.NO_CONTENT)
-  decline(@CurrentUser() user: AuthPrincipal, @Param('token') token: string) {
-    return this.service.decline(user.userId, token);
+  async decline(@CurrentUser() user: AuthPrincipal, @Param('token') token: string): Promise<void> {
+    await this.service.decline(user.userId, token);
   }
 
   @Post('sessions/:sessionId/consent')
-  consent(
+  async consent(
     @CurrentUser() user: AuthPrincipal,
     @Param('sessionId', new ParseUUIDPipe()) sessionId: string,
     @Body() input: GrantCallConsentDto,
   ) {
-    return this.service.grantConsent(user.userId, sessionId, input);
+    const result = await this.service.grantConsent(user.userId, sessionId, input);
+    this.gateway.notify(sessionId, 'consent:changed', result);
+    if (result.active) this.gateway.notify(sessionId, 'session:activated', result);
+    return result;
   }
 
   @Delete('sessions/:sessionId/consent')
   @HttpCode(HttpStatus.NO_CONTENT)
-  revoke(
+  async revoke(
     @CurrentUser() user: AuthPrincipal,
     @Param('sessionId', new ParseUUIDPipe()) sessionId: string,
-  ) {
-    return this.service.revokeConsent(user.userId, sessionId);
+  ): Promise<void> {
+    await this.service.revokeConsent(user.userId, sessionId);
+    this.gateway.notify(sessionId, 'session:ended', { sessionId, reason: 'CONSENT_REVOKED' });
   }
 
   @Post('sessions/:sessionId/location')
   @Throttle({ default: { limit: 180, ttl: 60_000 } })
-  location(
+  async location(
     @CurrentUser() user: AuthPrincipal,
     @Param('sessionId', new ParseUUIDPipe()) sessionId: string,
     @Body() input: CallSafetyLocationDto,
   ) {
-    return this.service.updateLocation(user.userId, sessionId, input);
+    const location = await this.service.updateLocation(user.userId, sessionId, input);
+    this.gateway.notify(sessionId, 'location:updated', location);
+    return location;
   }
 
   @Post('sessions/:sessionId/end')
   @HttpCode(HttpStatus.NO_CONTENT)
-  end(
+  async end(
     @CurrentUser() user: AuthPrincipal,
     @Param('sessionId', new ParseUUIDPipe()) sessionId: string,
-  ) {
-    return this.service.end(user.userId, sessionId);
+  ): Promise<void> {
+    await this.service.end(user.userId, sessionId);
+    this.gateway.notify(sessionId, 'session:ended', { sessionId, reason: 'USER_ENDED' });
   }
 }

@@ -276,7 +276,7 @@ export class CallSafetyService {
         ? approximateCoordinates({ latitude: input.latitude, longitude: input.longitude }, userId)
         : { latitude: input.latitude, longitude: input.longitude };
     try {
-      return await this.prisma.callSessionLocation.create({
+      const saved = await this.prisma.callSessionLocation.create({
         data: {
           sessionId,
           userId,
@@ -302,6 +302,16 @@ export class CallSafetyService {
           recordedAt: true,
         },
       });
+      return {
+        ...saved,
+        latitude: Number(saved.latitude),
+        longitude: Number(saved.longitude),
+        accuracyM: Number(saved.accuracyM),
+        headingDeg: saved.headingDeg === null ? null : Number(saved.headingDeg),
+        speedMps: saved.speedMps === null ? null : Number(saved.speedMps),
+        sequence: Number(saved.sequence),
+        recordedAt: saved.recordedAt.toISOString(),
+      };
     } catch (error) {
       if (
         typeof error === 'object' &&
@@ -335,7 +345,7 @@ export class CallSafetyService {
 
   async details(userId: string, sessionId: string) {
     await this.participant(sessionId, userId);
-    return this.prisma.callSafetySession.findUnique({
+    const session = await this.prisma.callSafetySession.findUnique({
       where: { id: sessionId },
       include: {
         participants: {
@@ -349,6 +359,20 @@ export class CallSafetyService {
         },
       },
     });
+    return session
+      ? {
+          ...session,
+          locations: session.locations.map((location) => ({
+            ...location,
+            latitude: Number(location.latitude),
+            longitude: Number(location.longitude),
+            accuracyM: Number(location.accuracyM),
+            headingDeg: location.headingDeg === null ? null : Number(location.headingDeg),
+            speedMps: location.speedMps === null ? null : Number(location.speedMps),
+            sequence: Number(location.sequence),
+          })),
+        }
+      : null;
   }
 
   async end(userId: string, sessionId: string): Promise<void> {
@@ -404,6 +428,22 @@ export class CallSafetyService {
       }),
     ]);
     return ids.length;
+  }
+
+  async participantIds(sessionId: string, userId: string): Promise<string[]> {
+    await this.participant(sessionId, userId);
+    const participants = await this.prisma.callParticipant.findMany({
+      where: { sessionId, deletedAt: null },
+      select: { userId: true },
+    });
+    return participants.map((participant) => participant.userId);
+  }
+
+  async purgeExpiredLocations(): Promise<number> {
+    const result = await this.prisma.callSessionLocation.deleteMany({
+      where: { purgeAt: { lte: new Date() } },
+    });
+    return result.count;
   }
 
   private async participant(sessionId: string, userId: string) {

@@ -37,6 +37,11 @@ export class GrantCallConsentDto {
   shareSpeed = false;
 }
 
+export class JoinCallSafetySessionDto {
+  @IsUUID()
+  sessionId: string;
+}
+
 export class CallSafetyLocationDto {
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 7 })
@@ -84,4 +89,9 @@ export class CallSafetyLocationDto {
 
   @IsDateString()
   recordedAt: string;
+}
+
+export class CallSafetySocketLocationDto extends CallSafetyLocationDto {
+  @IsUUID()
+  sessionId: string;
 }
