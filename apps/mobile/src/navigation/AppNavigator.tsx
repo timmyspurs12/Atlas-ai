@@ -9,6 +9,7 @@ import { ForgotPasswordScreen } from '@/features/auth/screens/ForgotPasswordScre
 import { LoginScreen } from '@/features/auth/screens/LoginScreen';
 import { OnboardingScreen } from '@/features/auth/screens/OnboardingScreen';
 import { RegisterScreen } from '@/features/auth/screens/RegisterScreen';
+import { StayWithMeScreen } from '@/features/call-safety/screens/StayWithMeScreen';
 import { ChatScreen } from '@/features/chat/screens/ChatScreen';
 import { PeopleScreen } from '@/features/friends/screens/PeopleScreen';
 import { GeofencesScreen } from '@/features/geofences/screens/GeofencesScreen';
@@ -96,6 +97,7 @@ export function AppNavigator() {
             Chat: 'chat/:conversationId',
             Assistant: 'assistant',
             Safety: 'safety',
+            StayWithMe: 'stay-with-me/invite/:invitationToken?',
           },
         },
       }}
@@ -128,6 +130,11 @@ export function AppNavigator() {
               name="Safety"
               component={SafetyScreen}
               options={{ presentation: 'modal' }}
+            />
+            <Stack.Screen
+              name="StayWithMe"
+              component={StayWithMeScreen}
+              options={{ animation: 'slide_from_right' }}
             />
           </>
         ) : (
