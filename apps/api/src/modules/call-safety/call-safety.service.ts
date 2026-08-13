@@ -19,8 +19,11 @@ import {
   FriendshipStatus,
   UserStatus,
 } from '../../generated/prisma/client';
+import type { AuthPrincipal } from '../auth/auth.types';
+import { SafetyService } from '../safety/safety.service';
 import type {
   CallSafetyLocationDto,
+  CallSafetySosDto,
   CreateCallSafetySessionDto,
   GrantCallConsentDto,
 } from './call-safety.dto';
@@ -30,6 +33,7 @@ export class CallSafetyService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService<Environment, true>,
+    private readonly emergency: SafetyService,
   ) {}
 
   async create(actorId: string, input: CreateCallSafetySessionDto) {
@@ -237,11 +241,15 @@ export class CallSafetyService {
   }
 
   async revokeConsent(userId: string, sessionId: string): Promise<void> {
-    const participant = await this.participant(sessionId, userId);
+    await this.participant(sessionId, userId);
     const now = new Date();
     await this.prisma.$transaction([
-      this.prisma.callConsent.update({
-        where: { participantId: participant.id },
+      this.prisma.callConsent.updateMany({
+        where: {
+          participant: { is: { sessionId } },
+          status: CallConsentStatus.ACTIVE,
+          deletedAt: null,
+        },
         data: { status: CallConsentStatus.REVOKED, revokedAt: now },
       }),
       this.prisma.callSafetySession.update({
@@ -396,6 +404,75 @@ export class CallSafetyService {
         },
       }),
     ]);
+  }
+
+  async purgeMyLocation(userId: string, sessionId: string): Promise<number> {
+    const participant = await this.participant(sessionId, userId);
+    const now = new Date();
+    return this.prisma.$transaction(async (tx) => {
+      const deleted = await tx.callSessionLocation.deleteMany({
+        where: { sessionId, userId },
+      });
+      if (participant.consent) {
+        await tx.callConsent.updateMany({
+          where: {
+            participant: { is: { sessionId } },
+            status: CallConsentStatus.ACTIVE,
+            deletedAt: null,
+          },
+          data: { status: CallConsentStatus.REVOKED, revokedAt: now },
+        });
+      }
+      if (participant.session.mutualRequired) {
+        await tx.callSafetySession.update({
+          where: { id: sessionId },
+          data: { status: CallSessionStatus.ENDED, endedAt: now },
+        });
+      }
+      await tx.callSessionEvent.createMany({
+        data: [
+          {
+            sessionId,
+            actorId: userId,
+            type: CallSessionEventType.LOCATION_STOPPED,
+            occurredAt: now,
+            metadata: { purge: 'IMMEDIATE', deletedCount: deleted.count },
+          },
+          {
+            sessionId,
+            actorId: userId,
+            type: CallSessionEventType.CONSENT_REVOKED,
+            occurredAt: now,
+          },
+        ],
+      });
+      return deleted.count;
+    });
+  }
+
+  async escalateSos(principal: AuthPrincipal, sessionId: string, input: CallSafetySosDto) {
+    const participant = await this.participant(sessionId, principal.userId);
+    if (
+      participant.session.status !== CallSessionStatus.ACTIVE ||
+      participant.session.expiresAt <= new Date()
+    ) {
+      throw new ForbiddenException('SOS escalation requires an active session');
+    }
+    const alert = await this.emergency.trigger(principal, input);
+    await this.prisma.auditLog.create({
+      data: {
+        actorId: principal.userId,
+        action: 'CALL_SAFETY_SOS_TRIGGERED',
+        entityType: 'CallSafetySession',
+        entityId: sessionId,
+        severity: 'CRITICAL',
+        outcome: 'SUCCESS',
+        metadata: {
+          sosAlertId: typeof alert.id === 'string' ? alert.id : null,
+        },
+      },
+    });
+    return alert;
   }
 
   async expireDueSessions(): Promise<number> {

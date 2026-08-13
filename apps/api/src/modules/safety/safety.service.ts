@@ -117,6 +117,23 @@ export class SafetyService {
       return { id: existing.id, status: existing.status, expiresAt: existing.publicExpiresAt };
     }
 
+    const activeAlert = await this.prisma.sosAlert.findFirst({
+      where: {
+        initiatorId: principal.userId,
+        status: { in: [EmergencyStatus.ACTIVE, EmergencyStatus.ACKNOWLEDGED] },
+        deletedAt: null,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (activeAlert) {
+      return {
+        id: activeAlert.id,
+        status: activeAlert.status,
+        expiresAt: activeAlert.publicExpiresAt,
+        alreadyActive: true,
+      };
+    }
+
     const contacts = await this.prisma.emergencyContact.findMany({
       where: { ownerId: principal.userId, isVerified: true, deletedAt: null },
     });

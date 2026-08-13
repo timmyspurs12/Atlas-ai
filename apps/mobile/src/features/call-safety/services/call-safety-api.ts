@@ -86,6 +86,28 @@ export function revokeCallSafetyConsent(sessionId: string): Promise<void> {
   return apiRequest(`/call-safety/sessions/${sessionId}/consent`, { method: 'DELETE' });
 }
 
+export function purgeCallSafetyLocation(sessionId: string): Promise<{ deleted: number }> {
+  return apiRequest(`/call-safety/sessions/${sessionId}/locations`, {
+    method: 'DELETE',
+  });
+}
+
+export function escalateCallSafetySos(
+  sessionId: string,
+  input: {
+    clientRequestId: string;
+    latitude: number;
+    longitude: number;
+    accuracyM: number;
+    message?: string;
+  },
+): Promise<unknown> {
+  return apiRequest(`/call-safety/sessions/${sessionId}/sos`, {
+    method: 'POST',
+    body: input,
+  });
+}
+
 export function endCallSafetySession(sessionId: string): Promise<void> {
   return apiRequest(`/call-safety/sessions/${sessionId}/end`, { method: 'POST' });
 }

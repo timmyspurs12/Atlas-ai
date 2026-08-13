@@ -13,6 +13,7 @@ import {
   UserRoundCheck,
 } from 'lucide-react-native';
 import { AtlasText } from '@/components/ui/AtlasText';
+import { ActionResultModal, ConfirmationModal } from '../components/ActionModal';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -67,11 +68,26 @@ export function StayWithMeScreen({ navigation, route }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [createdInvitationLink, setCreatedInvitationLink] = useState<string | null>(null);
-  const [currentAction, setCurrentAction] = useState<
-    'consent' | 'dialer' | 'sos' | 'purge' | 'stop' | 'end' | null
-  >(null);
+  type ActionName = 'consent' | 'dialer' | 'sos' | 'purge' | 'stop' | 'end';
+  const [currentAction, setCurrentAction] = useState<ActionName | null>(null);
+  const [confirmation, setConfirmation] = useState<{
+    action: ActionName;
+    title: string;
+    message: string;
+    cancelLabel: string;
+    confirmLabel: string;
+    danger: boolean;
+    operation: () => Promise<void>;
+    successMessage: string;
+  } | null>(null);
+  const [actionResult, setActionResult] = useState<{
+    success: boolean;
+    title: string;
+    message: string;
+  } | null>(null);
   const locationSubscription = useRef<Location.LocationSubscription | null>(null);
   const sequence = useRef(0);
+  const actionLock = useRef(false);
   const rawInvitationToken = route.params?.invitationToken;
   const invitationToken =
     rawInvitationToken && rawInvitationToken !== 'undefined' ? rawInvitationToken : undefined;
@@ -80,6 +96,9 @@ export function StayWithMeScreen({ navigation, route }: Props) {
     if (!current) return null;
     return Math.max(0, Math.ceil((new Date(current.expiresAt).getTime() - Date.now()) / 60_000));
   }, [current]);
+  const sessionClosed = Boolean(
+    current && ['ENDED', 'EXPIRED', 'CANCELLED'].includes(current.status),
+  );
 
   const refresh = async (sessionId?: string): Promise<CallSafetySession | null> => {
     if (mode === 'demo') return null;
@@ -191,24 +210,31 @@ export function StayWithMeScreen({ navigation, route }: Props) {
     operation: () => Promise<void>,
     successMessage: string,
   ): Promise<void> => {
+    if (actionLock.current) return;
+    actionLock.current = true;
     const startedAt = Date.now();
     setCurrentAction(action);
     setError(null);
     try {
       await operation();
-      const remaining = Math.max(0, 1_800 - (Date.now() - startedAt));
+      const remaining = Math.max(0, 3_000 - (Date.now() - startedAt));
       if (remaining > 0) {
         await new Promise((resolve) => setTimeout(resolve, remaining));
       }
-      Alert.alert('Completed', successMessage);
+      setActionResult({
+        success: true,
+        title: 'Action completed',
+        message: successMessage,
+      });
     } catch (caught) {
       const message =
         caught instanceof AtlasApiError || caught instanceof Error
           ? caught.message
           : 'The action could not be completed.';
       setError(message);
-      Alert.alert('Action failed', message);
+      setActionResult({ success: false, title: 'Action failed', message });
     } finally {
+      actionLock.current = false;
       setCurrentAction(null);
     }
   };
@@ -241,11 +267,16 @@ export function StayWithMeScreen({ navigation, route }: Props) {
     );
   }
 
-  const consent = async (): Promise<void> => {
+  const consent = (): void => {
     if (!current) return;
-    await runAction(
-      'consent',
-      async () => {
+    setConfirmation({
+      action: 'consent',
+      title: 'Grant location consent?',
+      message: `You are about to share ${precise ? 'precise' : 'approximate'} location for the remaining session duration.`,
+      cancelLabel: 'No, cancel',
+      confirmLabel: 'Yes, grant consent',
+      danger: false,
+      operation: async () => {
         const result = await grantCallSafetyConsent(
           current.id,
           precise ? 'PRECISE' : 'APPROXIMATE',
@@ -254,118 +285,95 @@ export function StayWithMeScreen({ navigation, route }: Props) {
         await refresh(current.id);
         if (result.active) await startTracking(current.id);
       },
-      'Your consent was recorded. Location starts only when the session is active.',
-    );
+      successMessage: 'Your consent was recorded. Location starts only when the session is active.',
+    });
   };
 
   const stop = (): void => {
     if (!current) return;
-    Alert.alert(
-      'Stop sharing now?',
-      'This immediately ends mutual location sharing for both participants.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Stop sharing',
-          style: 'destructive',
-          onPress: () =>
-            void runAction(
-              'stop',
-              async () => {
-                locationSubscription.current?.remove();
-                locationSubscription.current = null;
-                await revokeCallSafetyConsent(current.id);
-                await refresh(current.id);
-              },
-              'Location sharing stopped for both participants.',
-            ),
-        },
-      ],
-    );
+    setConfirmation({
+      action: 'stop',
+      title: 'Do you want to stop sharing?',
+      message: 'This immediately stops location sharing for both participants.',
+      cancelLabel: 'No, continue sharing',
+      confirmLabel: 'Yes, stop sharing',
+      danger: true,
+      operation: async () => {
+        locationSubscription.current?.remove();
+        locationSubscription.current = null;
+        await revokeCallSafetyConsent(current.id);
+        await refresh(current.id);
+      },
+      successMessage: 'Location sharing stopped successfully.',
+    });
   };
 
   const purge = (): void => {
     if (!current) return;
-    Alert.alert(
-      'Delete my session location now?',
-      'This permanently deletes your stored coordinates and ends mutual sharing.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete and stop',
-          style: 'destructive',
-          onPress: () =>
-            void runAction(
-              'purge',
-              async () => {
-                locationSubscription.current?.remove();
-                locationSubscription.current = null;
-                await purgeCallSafetyLocation(current.id);
-                setCurrent(null);
-              },
-              'Your stored session coordinates were permanently deleted.',
-            ),
-        },
-      ],
-    );
+    setConfirmation({
+      action: 'purge',
+      title: 'Permanently delete your session location?',
+      message:
+        'This removes your stored coordinates and ends mutual sharing. This cannot be undone.',
+      cancelLabel: 'No, keep it',
+      confirmLabel: 'Yes, delete',
+      danger: true,
+      operation: async () => {
+        locationSubscription.current?.remove();
+        locationSubscription.current = null;
+        await purgeCallSafetyLocation(current.id);
+        setCurrent(null);
+      },
+      successMessage: 'Your stored session coordinates were permanently deleted.',
+    });
   };
 
   const escalateSos = (): void => {
     if (!current) return;
-    Alert.alert(
-      'Escalate to emergency SOS?',
-      'Your current location will be sent to your verified emergency contacts.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Send SOS',
-          style: 'destructive',
-          onPress: () =>
-            void runAction(
-              'sos',
-              async () => {
-                const permission = await Location.requestForegroundPermissionsAsync();
-                if (!permission.granted) {
-                  throw new Error('Location permission is required for SOS.');
-                }
-                const location = await Location.getCurrentPositionAsync({
-                  accuracy: Location.Accuracy.High,
-                });
-                await escalateCallSafetySos(current.id, {
-                  clientRequestId: Crypto.randomUUID(),
-                  latitude: location.coords.latitude,
-                  longitude: location.coords.longitude,
-                  accuracyM: location.coords.accuracy ?? 0,
-                  message: 'SOS escalated from an active Stay With Me session.',
-                });
-              },
-              'SOS sent. Verified emergency contacts are being notified.',
-            ),
-        },
-      ],
-    );
+    setConfirmation({
+      action: 'sos',
+      title: 'Send emergency SOS?',
+      message: 'Your current location will be sent to verified emergency contacts.',
+      cancelLabel: 'No, cancel',
+      confirmLabel: 'Yes, send SOS',
+      danger: true,
+      operation: async () => {
+        const permission = await Location.requestForegroundPermissionsAsync();
+        if (!permission.granted) {
+          throw new Error('Location permission is required for SOS.');
+        }
+        const location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.High,
+        });
+        await escalateCallSafetySos(current.id, {
+          clientRequestId: Crypto.randomUUID(),
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+          accuracyM: location.coords.accuracy ?? 0,
+          message: 'SOS escalated from an active Stay With Me session.',
+        });
+      },
+      successMessage: 'SOS sent. Verified emergency contacts are being notified.',
+    });
   };
 
   const end = (): void => {
     if (!current) return;
-    Alert.alert('End Stay With Me session?', 'This stops the session for both participants.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'End session',
-        style: 'destructive',
-        onPress: () =>
-          void runAction(
-            'end',
-            async () => {
-              locationSubscription.current?.remove();
-              locationSubscription.current = null;
-              await endCallSafetySession(current.id);
-              setCurrent(null);
-            },
-            'The Stay With Me session ended.',
-          ),
+    setConfirmation({
+      action: 'end',
+      title: 'End Stay With Me session?',
+      message: 'Both participants will stop sharing and this session cannot restart.',
+      cancelLabel: 'No, keep session',
+      confirmLabel: 'Yes, end session',
+      danger: true,
+      operation: async () => {
+        locationSubscription.current?.remove();
+        locationSubscription.current = null;
+        await endCallSafetySession(current.id);
+        setCurrent(null);
       },
-    ]);
+      successMessage: 'The Stay With Me session ended.',
+    });
   };
 
   if (invitationToken && !current) {
@@ -422,7 +430,7 @@ export function StayWithMeScreen({ navigation, route }: Props) {
                 />
                 <AtlasText variant="caption">{participant.user.profile?.displayName}</AtlasText>
                 <AtlasText variant="micro" color={theme.colors.textMuted}>
-                  {participant.consent?.status ?? 'WAITING'}
+                  {sessionClosed ? 'SESSION CLOSED' : (participant.consent?.status ?? 'WAITING')}
                 </AtlasText>
               </View>
             ))}
@@ -454,60 +462,85 @@ export function StayWithMeScreen({ navigation, route }: Props) {
               </AtlasText>
             </View>
           ) : null}
-          <View style={styles.consentRow}>
-            <View style={styles.flex}>
-              <AtlasText variant="label">Share precise location</AtlasText>
-              <AtlasText variant="caption" color={theme.colors.textMuted}>
-                Turn off to share an intentionally blurred area.
+          {sessionClosed ? (
+            <View style={styles.closedSession}>
+              <AtlasText variant="h3">Session closed</AtlasText>
+              <AtlasText variant="caption" color={theme.colors.textMuted} align="center">
+                Location sharing is no longer active. Start a new session to share again.
               </AtlasText>
+              <Button
+                label="Start a new session"
+                onPress={() => {
+                  setCurrent(null);
+                  setCreatedInvitationLink(null);
+                  setError(null);
+                }}
+              />
             </View>
-            <Switch value={precise} onValueChange={setPrecise} />
-          </View>
-          <Button
-            label="Grant my consent"
-            icon={UserRoundCheck}
-            loading={loading || currentAction === 'consent'}
-            onPress={() => void consent()}
-          />
-          <Button
-            label="Open phone dialler"
-            icon={PhoneCall}
-            variant="secondary"
-            loading={currentAction === 'dialer'}
-            onPress={() =>
-              void runAction(
-                'dialer',
-                async () => {
-                  await Linking.openURL('tel:');
-                },
-                'Phone dialler requested.',
-              )
-            }
-          />
-          <Button
-            label="Emergency SOS"
-            variant="danger"
-            loading={currentAction === 'sos'}
-            onPress={escalateSos}
-          />
-          <Button
-            label="Delete my location now"
-            variant="secondary"
-            loading={currentAction === 'purge'}
-            onPress={purge}
-          />
-          <Button
-            label="Stop sharing now"
-            variant="danger"
-            loading={currentAction === 'stop'}
-            onPress={stop}
-          />
-          <Button
-            label="End session"
-            variant="ghost"
-            loading={currentAction === 'end'}
-            onPress={end}
-          />
+          ) : (
+            <>
+              <View style={styles.consentRow}>
+                <View style={styles.flex}>
+                  <AtlasText variant="label">Share precise location</AtlasText>
+                  <AtlasText variant="caption" color={theme.colors.textMuted}>
+                    Turn off to share an intentionally blurred area.
+                  </AtlasText>
+                </View>
+                <Switch value={precise} onValueChange={setPrecise} />
+              </View>
+              <Button
+                label="Grant my consent"
+                icon={UserRoundCheck}
+                loading={loading || currentAction === 'consent'}
+                onPress={() => void consent()}
+              />
+              <Button
+                label="Open phone dialler"
+                icon={PhoneCall}
+                variant="secondary"
+                loading={currentAction === 'dialer'}
+                onPress={() =>
+                  setConfirmation({
+                    action: 'dialer',
+                    title: 'Open your phone dialler?',
+                    message:
+                      'Atlas does not record the call. Location sharing is controlled separately.',
+                    cancelLabel: 'No',
+                    confirmLabel: 'Open dialler',
+                    danger: false,
+                    operation: async () => {
+                      await Linking.openURL('tel:');
+                    },
+                    successMessage: 'Phone dialler requested.',
+                  })
+                }
+              />
+              <Button
+                label="Emergency SOS"
+                variant="danger"
+                loading={currentAction === 'sos'}
+                onPress={escalateSos}
+              />
+              <Button
+                label="Delete my location now"
+                variant="secondary"
+                loading={currentAction === 'purge'}
+                onPress={purge}
+              />
+              <Button
+                label="Stop sharing now"
+                variant="danger"
+                loading={currentAction === 'stop'}
+                onPress={stop}
+              />
+              <Button
+                label="End session"
+                variant="ghost"
+                loading={currentAction === 'end'}
+                onPress={end}
+              />
+            </>
+          )}
         </Card>
       ) : (
         <>
@@ -609,6 +642,32 @@ export function StayWithMeScreen({ navigation, route }: Props) {
           />
         </>
       )}
+      <ConfirmationModal
+        visible={Boolean(confirmation)}
+        title={confirmation?.title ?? ''}
+        message={confirmation?.message ?? ''}
+        cancelLabel={confirmation?.cancelLabel ?? 'Cancel'}
+        confirmLabel={confirmation?.confirmLabel ?? 'Confirm'}
+        danger={confirmation?.danger}
+        loading={Boolean(confirmation && currentAction === confirmation.action)}
+        onCancel={() => {
+          if (!currentAction) setConfirmation(null);
+        }}
+        onConfirm={() => {
+          if (!confirmation) return;
+          const pending = confirmation;
+          void runAction(pending.action, pending.operation, pending.successMessage).finally(() =>
+            setConfirmation(null),
+          );
+        }}
+      />
+      <ActionResultModal
+        visible={Boolean(actionResult)}
+        success={actionResult?.success ?? false}
+        title={actionResult?.title ?? ''}
+        message={actionResult?.message ?? ''}
+        onClose={() => setActionResult(null)}
+      />
     </Screen>
   );
 }
@@ -676,6 +735,7 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
   },
   consentRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
+  closedSession: { alignItems: 'center', gap: spacing.md, paddingVertical: spacing.lg },
   error: { backgroundColor: 'rgba(239,68,68,0.08)', borderRadius: radii.sm, padding: spacing.sm },
   invitationLinkCard: { gap: spacing.sm, borderColor: 'rgba(37,99,235,0.25)' },
 });

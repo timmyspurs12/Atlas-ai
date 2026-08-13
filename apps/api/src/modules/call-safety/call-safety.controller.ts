@@ -15,6 +15,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthPrincipal } from '../auth/auth.types';
 import {
   CallSafetyLocationDto,
+  CallSafetySosDto,
   CreateCallSafetySessionDto,
   GrantCallConsentDto,
 } from './call-safety.dto';
@@ -94,6 +95,37 @@ export class CallSafetyController {
     const location = await this.service.updateLocation(user.userId, sessionId, input);
     this.gateway.notify(sessionId, 'location:updated', location);
     return location;
+  }
+
+  @Delete('sessions/:sessionId/locations')
+  async purgeMyLocation(
+    @CurrentUser() user: AuthPrincipal,
+    @Param('sessionId', new ParseUUIDPipe()) sessionId: string,
+  ): Promise<{ deleted: number }> {
+    const deleted = await this.service.purgeMyLocation(user.userId, sessionId);
+    this.gateway.notify(sessionId, 'location:purged', {
+      sessionId,
+      userId: user.userId,
+    });
+    this.gateway.notify(sessionId, 'session:ended', {
+      sessionId,
+      reason: 'LOCATION_PURGED',
+    });
+    return { deleted };
+  }
+
+  @Post('sessions/:sessionId/sos')
+  async escalateSos(
+    @CurrentUser() user: AuthPrincipal,
+    @Param('sessionId', new ParseUUIDPipe()) sessionId: string,
+    @Body() input: CallSafetySosDto,
+  ) {
+    const result = await this.service.escalateSos(user, sessionId, input);
+    this.gateway.notify(sessionId, 'sos:triggered', {
+      sessionId,
+      actorId: user.userId,
+    });
+    return result;
   }
 
   @Post('sessions/:sessionId/end')

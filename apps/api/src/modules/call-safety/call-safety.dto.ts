@@ -12,6 +12,7 @@ import {
   Min,
 } from 'class-validator';
 import { CallSessionMode, LocationPrecision } from '../../generated/prisma/client';
+import { TriggerSosDto } from '../safety/safety.dto';
 
 export class CreateCallSafetySessionDto {
   @IsUUID()
@@ -95,3 +96,5 @@ export class CallSafetySocketLocationDto extends CallSafetyLocationDto {
   @IsUUID()
   sessionId: string;
 }
+
+export class CallSafetySosDto extends TriggerSosDto {}
