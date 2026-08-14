@@ -14,6 +14,7 @@ import {
 } from 'lucide-react-native';
 import { AtlasText } from '@/components/ui/AtlasText';
 import { ActionResultModal, ConfirmationModal } from '../components/ActionModal';
+import { HoldToSosButton } from '../components/HoldToSosButton';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -76,6 +77,10 @@ async function requireSafetyActions(
   }
 }
 
+function roundCoordinate(value: number): number {
+  return Math.round(value * 10_000_000) / 10_000_000;
+}
+
 export function StayWithMeScreen({ navigation, route }: Props) {
   const theme = useAtlasTheme();
   const mode = useAppSelector((state) => state.auth.mode);
@@ -109,6 +114,7 @@ export function StayWithMeScreen({ navigation, route }: Props) {
     message: string;
   } | null>(null);
   const actionLock = useRef(false);
+  const sosLocationPromise = useRef<Promise<Location.LocationObject | null> | null>(null);
   const rawInvitationToken = route.params?.invitationToken;
   const invitationToken =
     rawInvitationToken && rawInvitationToken !== 'undefined' ? rawInvitationToken : undefined;
@@ -281,6 +287,7 @@ export function StayWithMeScreen({ navigation, route }: Props) {
       setError(message);
       setActionResult({ success: false, title: 'Action failed', message });
     } finally {
+      if (action === 'sos') sosLocationPromise.current = null;
       actionLock.current = false;
       setCurrentAction(null);
     }
@@ -367,28 +374,58 @@ export function StayWithMeScreen({ navigation, route }: Props) {
     });
   };
 
+  const prefetchSosLocation = async (): Promise<Location.LocationObject | null> => {
+    try {
+      const permission = await Location.getForegroundPermissionsAsync();
+      if (!permission.granted) return null;
+      return await Location.getLastKnownPositionAsync({
+        maxAge: 30_000,
+        requiredAccuracy: 150,
+      });
+    } catch {
+      return null;
+    }
+  };
+
+  const resolveSosLocation = async (): Promise<Location.LocationObject> => {
+    let permission = await Location.getForegroundPermissionsAsync();
+    if (!permission.granted) permission = await Location.requestForegroundPermissionsAsync();
+    if (!permission.granted) throw new Error('Location permission is required for SOS.');
+
+    const recent = await Location.getLastKnownPositionAsync({
+      maxAge: 30_000,
+      requiredAccuracy: 150,
+    });
+    return (
+      recent ??
+      Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+        mayShowUserSettingsDialog: true,
+      })
+    );
+  };
+
   const escalateSos = (): void => {
-    if (!current) return;
+    if (!current || current.status !== 'ACTIVE' || confirmation || actionLock.current) return;
+    const clientRequestId = Crypto.randomUUID();
+    sosLocationPromise.current = prefetchSosLocation();
     setConfirmation({
       action: 'sos',
       title: 'Send emergency SOS?',
-      message: 'Your current location will be sent to verified emergency contacts.',
+      message:
+        'You completed the safety hold. Confirm to immediately send your current location to verified emergency contacts.',
       cancelLabel: 'No, cancel',
-      confirmLabel: 'Yes, send SOS',
+      confirmLabel: 'Yes, send SOS now',
       danger: true,
       operation: async () => {
-        const permission = await Location.requestForegroundPermissionsAsync();
-        if (!permission.granted) {
-          throw new Error('Location permission is required for SOS.');
-        }
-        const location = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.High,
-        });
+        const prefetched = sosLocationPromise.current ? await sosLocationPromise.current : null;
+        const location = prefetched ?? (await resolveSosLocation());
+        sosLocationPromise.current = null;
         await escalateCallSafetySos(current.id, {
-          clientRequestId: Crypto.randomUUID(),
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-          accuracyM: location.coords.accuracy ?? 0,
+          clientRequestId,
+          latitude: roundCoordinate(location.coords.latitude),
+          longitude: roundCoordinate(location.coords.longitude),
+          accuracyM: Math.min(10_000, Math.max(0, location.coords.accuracy ?? 0)),
           message: 'SOS escalated from an active Stay With Me session.',
         });
       },
@@ -596,15 +633,26 @@ export function StayWithMeScreen({ navigation, route }: Props) {
                   })
                 }
               />
-              <Button
-                label={
-                  current.status === 'ACTIVE' ? 'Emergency SOS' : 'Emergency SOS (session inactive)'
-                }
-                variant="danger"
-                loading={currentAction === 'sos'}
-                disabled={current.status !== 'ACTIVE'}
-                onPress={escalateSos}
-              />
+              {Platform.OS === 'web' ? (
+                <Button
+                  label={
+                    current.status === 'ACTIVE'
+                      ? 'Confirm emergency SOS'
+                      : 'Emergency SOS (session inactive)'
+                  }
+                  variant="danger"
+                  loading={currentAction === 'sos'}
+                  disabled={current.status !== 'ACTIVE' || Boolean(confirmation)}
+                  onPress={escalateSos}
+                />
+              ) : (
+                <HoldToSosButton
+                  disabled={
+                    current.status !== 'ACTIVE' || Boolean(confirmation) || currentAction === 'sos'
+                  }
+                  onComplete={escalateSos}
+                />
+              )}
               <Button
                 label="Delete my location now"
                 variant="secondary"
@@ -735,7 +783,10 @@ export function StayWithMeScreen({ navigation, route }: Props) {
         danger={confirmation?.danger}
         loading={Boolean(confirmation && currentAction === confirmation.action)}
         onCancel={() => {
-          if (!currentAction) setConfirmation(null);
+          if (!currentAction) {
+            if (confirmation?.action === 'sos') sosLocationPromise.current = null;
+            setConfirmation(null);
+          }
         }}
         onConfirm={() => {
           if (!confirmation) return;
