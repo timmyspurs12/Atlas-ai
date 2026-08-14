@@ -280,10 +280,16 @@ export class AuthService {
   }
 
   async logout(principal: AuthPrincipal, metadata: RequestMetadata): Promise<void> {
-    await this.prisma.session.updateMany({
-      where: { id: principal.sessionId, userId: principal.userId, status: SessionStatus.ACTIVE },
-      data: { status: SessionStatus.REVOKED, revokedAt: new Date(), revokeReason: 'USER_LOGOUT' },
-    });
+    await this.prisma.$transaction([
+      this.prisma.session.updateMany({
+        where: { id: principal.sessionId, userId: principal.userId, status: SessionStatus.ACTIVE },
+        data: { status: SessionStatus.REVOKED, revokedAt: new Date(), revokeReason: 'USER_LOGOUT' },
+      }),
+      this.prisma.device.updateMany({
+        where: { id: principal.deviceId, userId: principal.userId, deletedAt: null },
+        data: { pushToken: null, pushEnabled: false },
+      }),
+    ]);
     await this.audit.record({
       actorId: principal.userId,
       action: 'AUTH_LOGOUT',
@@ -310,11 +316,25 @@ export class AuthService {
   }
 
   async revokeSession(principal: AuthPrincipal, sessionId: string): Promise<void> {
-    const result = await this.prisma.session.updateMany({
+    const session = await this.prisma.session.findFirst({
       where: { id: sessionId, userId: principal.userId, status: SessionStatus.ACTIVE },
-      data: { status: SessionStatus.REVOKED, revokedAt: new Date(), revokeReason: 'USER_REVOKED' },
+      select: { id: true, deviceId: true },
     });
-    if (result.count === 0) throw new UnauthorizedException('Session not found');
+    if (!session) throw new UnauthorizedException('Session not found');
+    await this.prisma.$transaction([
+      this.prisma.session.updateMany({
+        where: { id: session.id, userId: principal.userId, status: SessionStatus.ACTIVE },
+        data: {
+          status: SessionStatus.REVOKED,
+          revokedAt: new Date(),
+          revokeReason: 'USER_REVOKED',
+        },
+      }),
+      this.prisma.device.updateMany({
+        where: { id: session.deviceId, userId: principal.userId, deletedAt: null },
+        data: { pushToken: null, pushEnabled: false },
+      }),
+    ]);
     await this.audit.record({
       actorId: principal.userId,
       action: 'AUTH_SESSION_REVOKED',
@@ -441,6 +461,10 @@ export class AuthService {
           revokeReason: 'PASSWORD_RESET',
         },
       }),
+      this.prisma.device.updateMany({
+        where: { userId: challenge.userId, deletedAt: null },
+        data: { pushToken: null, pushEnabled: false },
+      }),
     ]);
     await this.audit.record({
       actorId: challenge.userId,
@@ -547,10 +571,19 @@ export class AuthService {
   }
 
   private async revokeTokenFamily(tokenFamily: string, reason: string): Promise<void> {
-    await this.prisma.session.updateMany({
-      where: { tokenFamily, status: SessionStatus.ACTIVE },
-      data: { status: SessionStatus.REVOKED, revokedAt: new Date(), revokeReason: reason },
-    });
+    await this.prisma.$transaction([
+      this.prisma.session.updateMany({
+        where: { tokenFamily, status: SessionStatus.ACTIVE },
+        data: { status: SessionStatus.REVOKED, revokedAt: new Date(), revokeReason: reason },
+      }),
+      this.prisma.device.updateMany({
+        where: {
+          sessions: { some: { tokenFamily } },
+          deletedAt: null,
+        },
+        data: { pushToken: null, pushEnabled: false },
+      }),
+    ]);
   }
 
   private hashValue(value: string): string {

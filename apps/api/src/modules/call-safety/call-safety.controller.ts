@@ -60,7 +60,34 @@ export class CallSafetyController {
   @Post('invitations/:token/decline')
   @HttpCode(HttpStatus.NO_CONTENT)
   async decline(@CurrentUser() user: AuthPrincipal, @Param('token') token: string): Promise<void> {
-    await this.service.decline(user.userId, token);
+    const result = await this.service.decline(user.userId, token);
+    this.gateway.notify(result.sessionId, 'session:ended', {
+      sessionId: result.sessionId,
+      reason: 'INVITATION_DECLINED',
+    });
+  }
+
+  @Post('invitations/by-id/:invitationId/accept')
+  async acceptById(
+    @CurrentUser() user: AuthPrincipal,
+    @Param('invitationId', new ParseUUIDPipe()) invitationId: string,
+  ) {
+    const result = await this.service.acceptById(user.userId, invitationId);
+    this.gateway.notify(result.sessionId, 'invitation:accepted', result);
+    return result;
+  }
+
+  @Post('invitations/by-id/:invitationId/decline')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async declineById(
+    @CurrentUser() user: AuthPrincipal,
+    @Param('invitationId', new ParseUUIDPipe()) invitationId: string,
+  ): Promise<void> {
+    const result = await this.service.declineById(user.userId, invitationId);
+    this.gateway.notify(result.sessionId, 'session:ended', {
+      sessionId: result.sessionId,
+      reason: 'INVITATION_DECLINED',
+    });
   }
 
   @Post('sessions/:sessionId/consent')

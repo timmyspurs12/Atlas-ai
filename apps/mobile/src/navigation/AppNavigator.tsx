@@ -1,4 +1,11 @@
-import { NavigationContainer, DarkTheme, DefaultTheme, type Theme } from '@react-navigation/native';
+import { useEffect } from 'react';
+import {
+  createNavigationContainerRef,
+  NavigationContainer,
+  DarkTheme,
+  DefaultTheme,
+  type Theme,
+} from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { BusFront, Clock3, Map, Settings, UsersRound } from 'lucide-react-native';
@@ -15,6 +22,10 @@ import { PeopleScreen } from '@/features/friends/screens/PeopleScreen';
 import { GeofencesScreen } from '@/features/geofences/screens/GeofencesScreen';
 import { HomeScreen } from '@/features/home/screens/HomeScreen';
 import { NotificationsScreen } from '@/features/notifications/screens/NotificationsScreen';
+import {
+  addCallSafetyNotificationResponseListener,
+  openInitialCallSafetyNotification,
+} from '@/features/notifications/services/notification-service';
 import { RoutesScreen } from '@/features/routes/screens/RoutesScreen';
 import { SafetyScreen } from '@/features/safety/screens/SafetyScreen';
 import { SettingsScreen } from '@/features/settings/screens/SettingsScreen';
@@ -25,6 +36,8 @@ import type { MainTabParamList, RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tabs = createBottomTabNavigator<MainTabParamList>();
+const navigationRef = createNavigationContainerRef<RootStackParamList>();
+let pendingCallSafetyInvitationId: string | null = null;
 
 const tabIcons: Record<keyof MainTabParamList, LucideIcon> = {
   Home: Map,
@@ -71,6 +84,21 @@ function MainTabs() {
 export function AppNavigator() {
   const atlasTheme = useAtlasTheme();
   const signedIn = useAppSelector((state) => state.auth.status === 'signedIn');
+
+  useEffect(() => {
+    if (!signedIn) return undefined;
+    const openInvitation = (route: { invitationId: string }): void => {
+      if (navigationRef.isReady()) {
+        navigationRef.navigate('StayWithMe', { invitationId: route.invitationId });
+      } else {
+        pendingCallSafetyInvitationId = route.invitationId;
+      }
+    };
+    const unsubscribe = addCallSafetyNotificationResponseListener(openInvitation);
+    void openInitialCallSafetyNotification(openInvitation).catch(() => undefined);
+    return unsubscribe;
+  }, [signedIn]);
+
   const navigationTheme: Theme = {
     ...(atlasTheme.dark ? DarkTheme : DefaultTheme),
     colors: {
@@ -85,7 +113,16 @@ export function AppNavigator() {
   };
   return (
     <NavigationContainer
+      ref={navigationRef}
       theme={navigationTheme}
+      onReady={() => {
+        if (pendingCallSafetyInvitationId) {
+          navigationRef.navigate('StayWithMe', {
+            invitationId: pendingCallSafetyInvitationId,
+          });
+          pendingCallSafetyInvitationId = null;
+        }
+      }}
       linking={{
         prefixes: ['atlasai://'],
         config: {

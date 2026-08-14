@@ -22,6 +22,11 @@ const environmentSchema = z
     LOCATION_RETENTION_DAYS: z.coerce.number().int().min(1).max(365).default(30),
     OPENAI_API_KEY: z.string().optional(),
     OPENAI_MODEL: z.string().default('gpt-5-mini'),
+    EXPO_PUSH_ENABLED: z
+      .enum(['true', 'false'])
+      .default('true')
+      .transform((value) => value === 'true'),
+    EXPO_ACCESS_TOKEN: z.string().optional(),
     FCM_PROJECT_ID: z.string().optional(),
     FCM_CLIENT_EMAIL: z.string().optional(),
     FCM_PRIVATE_KEY: z.string().optional(),

@@ -72,6 +72,20 @@ export function declineCallSafetyInvitation(token: string): Promise<void> {
   });
 }
 
+export function acceptCallSafetyInvitationById(
+  invitationId: string,
+): Promise<{ sessionId: string }> {
+  return apiRequest(`/call-safety/invitations/by-id/${encodeURIComponent(invitationId)}/accept`, {
+    method: 'POST',
+  });
+}
+
+export function declineCallSafetyInvitationById(invitationId: string): Promise<void> {
+  return apiRequest(`/call-safety/invitations/by-id/${encodeURIComponent(invitationId)}/decline`, {
+    method: 'POST',
+  });
+}
+
 export function grantCallSafetyConsent(
   sessionId: string,
   precision: 'PRECISE' | 'APPROXIMATE',

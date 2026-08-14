@@ -28,6 +28,7 @@ import {
   reconcileCallSafetyLocationTracking,
   stopCallSafetyLocationTracking,
 } from '@/features/call-safety/services/call-safety-location';
+import { registerPushNotifications } from '@/features/notifications/services/notification-service';
 import { AppNavigator } from '@/navigation/AppNavigator';
 import { palette } from '@/shared/config/theme';
 import { useAppSelector } from '@/shared/hooks/redux';
@@ -87,6 +88,7 @@ function AtlasApp() {
   useEffect(() => {
     if (authStatus === 'signedIn' && authMode === 'live' && currentUserId) {
       void reconcileCallSafetyLocationTracking(currentUserId).catch(() => undefined);
+      void registerPushNotifications(false).catch(() => undefined);
     } else if (authStatus === 'signedOut' || authMode === 'demo') {
       void stopCallSafetyLocationTracking().catch(() => undefined);
     }

@@ -12,6 +12,7 @@ interface IconButtonProps {
   iconSize?: number;
   style?: ViewStyle;
   danger?: boolean;
+  disabled?: boolean;
 }
 
 export function IconButton({
@@ -22,12 +23,15 @@ export function IconButton({
   iconSize = 20,
   style,
   danger = false,
+  disabled = false,
 }: IconButtonProps) {
   const theme = useAtlasTheme();
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
+      accessibilityState={{ disabled }}
+      disabled={disabled}
       hitSlop={8}
       onPress={() => {
         void Haptics.selectionAsync();
@@ -42,7 +46,7 @@ export function IconButton({
           borderRadius: radii.md,
           backgroundColor: theme.colors.mapOverlay,
           borderColor: theme.colors.border,
-          opacity: pressed ? 0.72 : 1,
+          opacity: disabled ? 0.45 : pressed ? 0.72 : 1,
         },
         style,
       ]}

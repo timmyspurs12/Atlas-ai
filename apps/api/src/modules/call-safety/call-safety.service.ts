@@ -4,6 +4,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -17,9 +18,14 @@ import {
   CallSessionEventType,
   CallSessionStatus,
   FriendshipStatus,
+  NotificationChannel,
+  NotificationType,
+  Prisma,
   UserStatus,
 } from '../../generated/prisma/client';
 import type { AuthPrincipal } from '../auth/auth.types';
+import { buildCallSafetyInvitationNotificationData } from '../notifications/domain/call-safety-invitation-notification.policy';
+import { NotificationsService } from '../notifications/notifications.service';
 import { SafetyService } from '../safety/safety.service';
 import type {
   CallSafetyLocationDto,
@@ -30,10 +36,13 @@ import type {
 
 @Injectable()
 export class CallSafetyService {
+  private readonly logger = new Logger(CallSafetyService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService<Environment, true>,
     private readonly emergency: SafetyService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async create(actorId: string, input: CreateCallSafetySessionDto) {
@@ -88,7 +97,7 @@ export class CallSafetyService {
     const token = randomBytes(32).toString('base64url');
     const now = new Date();
     const expiresAt = new Date(now.getTime() + input.durationMinutes * 60_000);
-    const session = await this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const created = await tx.callSafetySession.create({
         data: {
           initiatorId: actorId,
@@ -124,7 +133,7 @@ export class CallSafetyService {
           },
         },
       });
-      await tx.callInvitation.create({
+      const invitation = await tx.callInvitation.create({
         data: {
           sessionId: created.id,
           invitedUserId: invitee.id,
@@ -148,56 +157,65 @@ export class CallSafetyService {
           },
         ],
       });
-      return created;
+      const notificationData = buildCallSafetyInvitationNotificationData({
+        invitationId: invitation.id,
+        sessionId: created.id,
+        expiresAt,
+      });
+      const commonNotification = {
+        userId: invitee.id,
+        actorId,
+        type: NotificationType.CALL_SAFETY_INVITATION,
+        title: 'Stay With Me invitation',
+        body: `${initiator.profile?.displayName ?? 'A verified Atlas user'} invited you to a private, time-limited safety session.`,
+        data: { ...notificationData },
+        entityType: 'CallInvitation',
+        entityId: invitation.id,
+      } as const;
+      await tx.notification.create({
+        data: {
+          ...commonNotification,
+          channel: NotificationChannel.IN_APP,
+          dedupeKey: `call-safety:${invitation.id}:in-app`,
+          deliveredAt: now,
+        },
+      });
+      const pushNotification = await tx.notification.create({
+        data: {
+          ...commonNotification,
+          channel: NotificationChannel.PUSH,
+          dedupeKey: `call-safety:${invitation.id}:push`,
+          nextDeliveryAt: now,
+        },
+      });
+      return { session: created, pushNotificationId: pushNotification.id };
     });
-    return { sessionId: session.id, invitationToken: token, expiresAt };
+    void this.notifications
+      .deliverCallSafetyInvitation(result.pushNotificationId)
+      .catch(() =>
+        this.logger.warn(`Invitation push queued for later delivery: ${result.pushNotificationId}`),
+      );
+    return { sessionId: result.session.id, invitationToken: token, expiresAt };
   }
 
   async accept(userId: string, token: string) {
-    const invitation = await this.invitation(token, userId);
-    const now = new Date();
-    return this.prisma.$transaction(async (tx) => {
-      await tx.callInvitation.update({
-        where: { id: invitation.id },
-        data: { status: CallInvitationStatus.ACCEPTED, acceptedAt: now },
-      });
-      await tx.callParticipant.updateMany({
-        where: { sessionId: invitation.sessionId, userId, deletedAt: null },
-        data: { joinedAt: now },
-      });
-      await tx.callSessionEvent.create({
-        data: {
-          sessionId: invitation.sessionId,
-          actorId: userId,
-          type: CallSessionEventType.ACCEPTED,
-          occurredAt: now,
-        },
-      });
-      return { sessionId: invitation.sessionId, accepted: true };
-    });
+    return this.acceptInvitation(userId, await this.invitation(token, userId));
   }
 
-  async decline(userId: string, token: string): Promise<void> {
+  async acceptById(userId: string, invitationId: string) {
+    return this.acceptInvitation(userId, await this.invitationById(invitationId, userId));
+  }
+
+  async decline(userId: string, token: string): Promise<{ sessionId: string }> {
     const invitation = await this.invitation(token, userId);
-    const now = new Date();
-    await this.prisma.$transaction([
-      this.prisma.callInvitation.update({
-        where: { id: invitation.id },
-        data: { status: CallInvitationStatus.DECLINED, declinedAt: now },
-      }),
-      this.prisma.callSafetySession.update({
-        where: { id: invitation.sessionId },
-        data: { status: CallSessionStatus.CANCELLED, endedAt: now },
-      }),
-      this.prisma.callSessionEvent.create({
-        data: {
-          sessionId: invitation.sessionId,
-          actorId: userId,
-          type: CallSessionEventType.DECLINED,
-          occurredAt: now,
-        },
-      }),
-    ]);
+    await this.declineInvitation(userId, invitation);
+    return { sessionId: invitation.sessionId };
+  }
+
+  async declineById(userId: string, invitationId: string): Promise<{ sessionId: string }> {
+    const invitation = await this.invitationById(invitationId, userId);
+    await this.declineInvitation(userId, invitation);
+    return { sessionId: invitation.sessionId };
   }
 
   async grantConsent(userId: string, sessionId: string, input: GrantCallConsentDto) {
@@ -523,6 +541,112 @@ export class CallSafetyService {
     return result.count;
   }
 
+  private async acceptInvitation(userId: string, invitation: { id: string; sessionId: string }) {
+    const now = new Date();
+    return this.prisma.$transaction(async (tx) => {
+      const accepted = await tx.callInvitation.updateMany({
+        where: {
+          id: invitation.id,
+          invitedUserId: userId,
+          status: CallInvitationStatus.PENDING,
+          expiresAt: { gt: now },
+          deletedAt: null,
+        },
+        data: { status: CallInvitationStatus.ACCEPTED, acceptedAt: now },
+      });
+      if (accepted.count !== 1) throw new ConflictException('Invitation is no longer pending');
+      await tx.callParticipant.updateMany({
+        where: { sessionId: invitation.sessionId, userId, deletedAt: null },
+        data: { joinedAt: now },
+      });
+      await tx.callSessionEvent.create({
+        data: {
+          sessionId: invitation.sessionId,
+          actorId: userId,
+          type: CallSessionEventType.ACCEPTED,
+          occurredAt: now,
+        },
+      });
+      await this.completeInvitationNotifications(tx, userId, invitation.id, now, 'ACCEPTED');
+      return { sessionId: invitation.sessionId, accepted: true };
+    });
+  }
+
+  private async declineInvitation(
+    userId: string,
+    invitation: { id: string; sessionId: string },
+  ): Promise<void> {
+    const now = new Date();
+    await this.prisma.$transaction(async (tx) => {
+      const declined = await tx.callInvitation.updateMany({
+        where: {
+          id: invitation.id,
+          invitedUserId: userId,
+          status: CallInvitationStatus.PENDING,
+          expiresAt: { gt: now },
+          deletedAt: null,
+        },
+        data: { status: CallInvitationStatus.DECLINED, declinedAt: now },
+      });
+      if (declined.count !== 1) throw new ConflictException('Invitation is no longer pending');
+      await tx.callSafetySession.update({
+        where: { id: invitation.sessionId },
+        data: { status: CallSessionStatus.CANCELLED, endedAt: now },
+      });
+      await tx.callConsent.updateMany({
+        where: {
+          participant: { is: { sessionId: invitation.sessionId } },
+          status: CallConsentStatus.ACTIVE,
+          deletedAt: null,
+        },
+        data: { status: CallConsentStatus.REVOKED, revokedAt: now },
+      });
+      await tx.callSessionEvent.create({
+        data: {
+          sessionId: invitation.sessionId,
+          actorId: userId,
+          type: CallSessionEventType.DECLINED,
+          occurredAt: now,
+        },
+      });
+      await this.completeInvitationNotifications(tx, userId, invitation.id, now, 'DECLINED');
+    });
+  }
+
+  private async completeInvitationNotifications(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    invitationId: string,
+    now: Date,
+    outcome: 'ACCEPTED' | 'DECLINED',
+  ): Promise<void> {
+    await tx.notification.updateMany({
+      where: {
+        userId,
+        entityType: 'CallInvitation',
+        entityId: invitationId,
+        deletedAt: null,
+      },
+      data: { readAt: now },
+    });
+    await tx.notification.updateMany({
+      where: {
+        userId,
+        entityType: 'CallInvitation',
+        entityId: invitationId,
+        channel: NotificationChannel.PUSH,
+        deliveredAt: null,
+        deletedAt: null,
+      },
+      data: {
+        deliveredAt: now,
+        deliveryClaimedAt: null,
+        nextDeliveryAt: null,
+        deliveryError: `INVITATION_${outcome}`,
+      },
+    });
+  }
+
   private async participant(sessionId: string, userId: string) {
     const participant = await this.prisma.callParticipant.findFirst({
       where: {
@@ -535,6 +659,21 @@ export class CallSafetyService {
     });
     if (!participant) throw new ForbiddenException('Session access denied');
     return participant;
+  }
+
+  private async invitationById(invitationId: string, userId: string) {
+    const invitation = await this.prisma.callInvitation.findFirst({
+      where: {
+        id: invitationId,
+        invitedUserId: userId,
+        status: CallInvitationStatus.PENDING,
+        expiresAt: { gt: new Date() },
+        deletedAt: null,
+      },
+      select: { id: true, sessionId: true },
+    });
+    if (!invitation) throw new NotFoundException('Invitation is invalid or expired');
+    return invitation;
   }
 
   private async invitation(token: string, userId: string) {

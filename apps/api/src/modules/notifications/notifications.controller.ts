@@ -1,4 +1,14 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthPrincipal } from '../auth/auth.types';
@@ -37,6 +47,12 @@ export class NotificationsController {
     @Body() input: RegisterPushTokenDto,
   ): Promise<void> {
     await this.notifications.registerPushToken(principal, input);
+  }
+
+  @Delete('push-token')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async removePushToken(@CurrentUser() principal: AuthPrincipal): Promise<void> {
+    await this.notifications.unregisterPushToken(principal);
   }
 
   @Get('preferences')

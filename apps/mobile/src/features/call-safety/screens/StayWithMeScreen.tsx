@@ -26,8 +26,10 @@ import { useAppSelector } from '@/shared/hooks/redux';
 import { useAtlasTheme } from '@/shared/hooks/use-atlas-theme';
 import {
   acceptCallSafetyInvitation,
+  acceptCallSafetyInvitationById,
   createCallSafetySession,
   declineCallSafetyInvitation,
+  declineCallSafetyInvitationById,
   endCallSafetySession,
   escalateCallSafetySos,
   getCallSafetySession,
@@ -110,6 +112,9 @@ export function StayWithMeScreen({ navigation, route }: Props) {
   const rawInvitationToken = route.params?.invitationToken;
   const invitationToken =
     rawInvitationToken && rawInvitationToken !== 'undefined' ? rawInvitationToken : undefined;
+  const rawInvitationId = route.params?.invitationId;
+  const invitationId =
+    rawInvitationId && rawInvitationId !== 'undefined' ? rawInvitationId : undefined;
 
   const remainingMinutes = useMemo(() => {
     if (!current) return null;
@@ -180,7 +185,7 @@ export function StayWithMeScreen({ navigation, route }: Props) {
           });
         },
       });
-      await refresh();
+      if (!invitationToken && !invitationId) await refresh();
     })().catch((caught: unknown) => {
       setError(caught instanceof Error ? caught.message : 'Stay With Me could not be loaded.');
     });
@@ -227,14 +232,17 @@ export function StayWithMeScreen({ navigation, route }: Props) {
   };
 
   const respond = async (accept: boolean): Promise<void> => {
-    if (!invitationToken) return;
+    if (!invitationToken && !invitationId) return;
     setLoading(true);
     try {
       if (accept) {
-        const result = await acceptCallSafetyInvitation(invitationToken);
+        const result = invitationId
+          ? await acceptCallSafetyInvitationById(invitationId)
+          : await acceptCallSafetyInvitation(invitationToken as string);
         await refresh(result.sessionId);
       } else {
-        await declineCallSafetyInvitation(invitationToken);
+        if (invitationId) await declineCallSafetyInvitationById(invitationId);
+        else await declineCallSafetyInvitation(invitationToken as string);
         navigation.goBack();
       }
     } catch (caught) {
@@ -408,7 +416,7 @@ export function StayWithMeScreen({ navigation, route }: Props) {
     });
   };
 
-  if (invitationToken && !current) {
+  if ((invitationToken || invitationId) && !current) {
     return (
       <Screen contentStyle={styles.content}>
         <IconButton icon={ArrowLeft} label="Back" onPress={() => navigation.goBack()} />

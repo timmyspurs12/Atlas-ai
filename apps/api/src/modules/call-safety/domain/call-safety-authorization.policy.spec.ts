@@ -13,13 +13,21 @@ describe('call safety authorization policy', () => {
   });
 
   it('binds invitation acceptance to the intended user', () => {
+    const invitation = {
+      intendedUserId: 'sarah',
+      status: 'PENDING',
+      expiresAt: new Date('2026-08-12T13:00:00.000Z'),
+      now,
+    };
+    expect(canAcceptCallSafetyInvitation({ ...invitation, acceptingUserId: 'stranger' })).toBe(
+      false,
+    );
+    expect(canAcceptCallSafetyInvitation({ ...invitation, acceptingUserId: 'sarah' })).toBe(true);
     expect(
       canAcceptCallSafetyInvitation({
-        intendedUserId: 'sarah',
-        acceptingUserId: 'stranger',
-        status: 'PENDING',
-        expiresAt: new Date('2026-08-12T13:00:00.000Z'),
-        now,
+        ...invitation,
+        acceptingUserId: 'sarah',
+        expiresAt: new Date('2026-08-12T11:59:59.000Z'),
       }),
     ).toBe(false);
   });
