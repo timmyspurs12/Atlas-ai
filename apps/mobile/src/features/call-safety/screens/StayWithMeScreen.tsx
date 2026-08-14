@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Linking, Pressable, Share, StyleSheet, Switch, View } from 'react-native';
+import { Alert, Linking, Platform, Pressable, Share, StyleSheet, Switch, View } from 'react-native';
 import * as Crypto from 'expo-crypto';
 import * as ExpoLinking from 'expo-linking';
 import * as Location from 'expo-location';
@@ -35,9 +35,16 @@ import {
   listCallSafetySessions,
   purgeCallSafetyLocation,
   revokeCallSafetyConsent,
-  sendCallSafetyLocation,
   type CallSafetySession,
 } from '../services/call-safety-api';
+import {
+  armCallSafetyLocationTracking,
+  getCallSafetyTrackingSnapshot,
+  prepareCallSafetyLocationPermission,
+  reconcileCallSafetyLocationTracking,
+  stopCallSafetyLocationTracking,
+  subscribeCallSafetyTracking,
+} from '../services/call-safety-location';
 import {
   connectCallSafetyRealtime,
   disconnectCallSafetyRealtime,
@@ -55,6 +62,18 @@ interface FriendItem {
   };
 }
 
+async function requireSafetyActions(
+  actions: Array<Promise<unknown>>,
+  fallbackMessage: string,
+): Promise<void> {
+  const results = await Promise.allSettled(actions);
+  const failure = results.find((result) => result.status === 'rejected');
+  if (failure?.status === 'rejected') {
+    const reason: unknown = failure.reason;
+    throw reason instanceof Error ? reason : new Error(fallbackMessage);
+  }
+}
+
 export function StayWithMeScreen({ navigation, route }: Props) {
   const theme = useAtlasTheme();
   const mode = useAppSelector((state) => state.auth.mode);
@@ -63,6 +82,8 @@ export function StayWithMeScreen({ navigation, route }: Props) {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [duration, setDuration] = useState<15 | 30 | 60>(30);
   const [precise, setPrecise] = useState(true);
+  const [continueInBackground, setContinueInBackground] = useState(false);
+  const [trackingState, setTrackingState] = useState(getCallSafetyTrackingSnapshot);
   const [current, setCurrent] = useState<CallSafetySession | null>(null);
   const [remoteLocation, setRemoteLocation] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(false);
@@ -85,8 +106,6 @@ export function StayWithMeScreen({ navigation, route }: Props) {
     title: string;
     message: string;
   } | null>(null);
-  const locationSubscription = useRef<Location.LocationSubscription | null>(null);
-  const sequence = useRef(0);
   const actionLock = useRef(false);
   const rawInvitationToken = route.params?.invitationToken;
   const invitationToken =
@@ -99,6 +118,15 @@ export function StayWithMeScreen({ navigation, route }: Props) {
   const sessionClosed = Boolean(
     current && ['ENDED', 'EXPIRED', 'CANCELLED'].includes(current.status),
   );
+  const ownConsent = useMemo(
+    () =>
+      current?.participants.find((participant) => participant.userId === currentUserId)?.consent ??
+      null,
+    [current, currentUserId],
+  );
+  const ownConsentActive = ownConsent?.status === 'ACTIVE';
+  const currentTrackingStatus =
+    trackingState.sessionId === current?.id ? trackingState.status : 'IDLE';
 
   const refresh = async (sessionId?: string): Promise<CallSafetySession | null> => {
     if (mode === 'demo') return null;
@@ -107,8 +135,14 @@ export function StayWithMeScreen({ navigation, route }: Props) {
     if (!id) return null;
     const updated = await getCallSafetySession(id);
     setCurrent(updated);
+    joinCallSafetySession(updated.id);
+    if (currentUserId) {
+      await reconcileCallSafetyLocationTracking(currentUserId, updated);
+    }
     return updated;
   };
+
+  useEffect(() => subscribeCallSafetyTracking(setTrackingState), []);
 
   useEffect(() => {
     if (mode === 'demo') {
@@ -127,26 +161,31 @@ export function StayWithMeScreen({ navigation, route }: Props) {
       setSelectedUserId(demoFriends[0]?.friend.id ?? null);
       return;
     }
-    void apiRequest<{ friends: FriendItem[] }>('/friends').then((result) => {
-      setFriends(result.friends);
-      setSelectedUserId(result.friends[0]?.friend.id ?? null);
+    void apiRequest<{ friends: FriendItem[] }>('/friends')
+      .then((result) => {
+        setFriends(result.friends);
+        setSelectedUserId(result.friends[0]?.friend.id ?? null);
+      })
+      .catch((caught: unknown) => {
+        setError(caught instanceof Error ? caught.message : 'Trusted people could not be loaded.');
+      });
+    void (async () => {
+      await connectCallSafetyRealtime({
+        onLocation: setRemoteLocation,
+        onSessionChanged: () => {
+          void refresh().catch((caught: unknown) => {
+            setError(
+              caught instanceof Error ? caught.message : 'Session status could not refresh.',
+            );
+          });
+        },
+      });
+      await refresh();
+    })().catch((caught: unknown) => {
+      setError(caught instanceof Error ? caught.message : 'Stay With Me could not be loaded.');
     });
-    void connectCallSafetyRealtime({
-      onLocation: setRemoteLocation,
-      onSessionChanged: () =>
-        void refresh().then((updated) => {
-          const ownConsent = updated?.participants.find(
-            (participant) => participant.userId === currentUserId,
-          )?.consent;
-          if (updated?.status === 'ACTIVE' && ownConsent?.status === 'ACTIVE') {
-            void startTracking(updated.id);
-          }
-        }),
-    });
-    void refresh();
     return () => {
       disconnectCallSafetyRealtime();
-      locationSubscription.current?.remove();
     };
   }, [mode]);
 
@@ -239,53 +278,43 @@ export function StayWithMeScreen({ navigation, route }: Props) {
     }
   };
 
-  async function startTracking(sessionId: string): Promise<void> {
-    if (locationSubscription.current) return;
-    const permission = await Location.requestForegroundPermissionsAsync();
-    if (!permission.granted) throw new Error('Location permission was not granted.');
-    locationSubscription.current = await Location.watchPositionAsync(
-      { accuracy: Location.Accuracy.High, timeInterval: 5_000, distanceInterval: 8 },
-      (location) => {
-        sequence.current += 1;
-        void sendCallSafetyLocation(sessionId, {
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-          accuracyM: location.coords.accuracy ?? 0,
-          headingDeg: location.coords.heading ?? undefined,
-          speedMps: location.coords.speed ?? undefined,
-          sequence: sequence.current,
-          recordedAt: new Date(location.timestamp).toISOString(),
-        }).catch((caught: unknown) => {
-          const message = caught instanceof Error ? caught.message : 'Location update failed.';
-          setError(message);
-          if (message.includes('Active consent is required')) {
-            locationSubscription.current?.remove();
-            locationSubscription.current = null;
-          }
-        });
-      },
-    );
-  }
-
   const consent = (): void => {
     if (!current) return;
     setConfirmation({
       action: 'consent',
       title: 'Grant location consent?',
-      message: `You are about to share ${precise ? 'precise' : 'approximate'} location for the remaining session duration.`,
+      message: `You are about to share ${precise ? 'precise' : 'approximate'} location for the remaining session duration${continueInBackground ? ', including while Atlas is in the background' : ' while Atlas is open'}. No tracking starts until both people consent.`,
       cancelLabel: 'No, cancel',
       confirmLabel: 'Yes, grant consent',
       danger: false,
       operation: async () => {
-        const result = await grantCallSafetyConsent(
-          current.id,
-          precise ? 'PRECISE' : 'APPROXIMATE',
-        );
-        joinCallSafetySession(current.id);
-        await refresh(current.id);
-        if (result.active) await startTracking(current.id);
+        if (!currentUserId) throw new Error('Sign in again before granting consent.');
+        const permission = await prepareCallSafetyLocationPermission(continueInBackground);
+        let consentGranted = false;
+        try {
+          await grantCallSafetyConsent(current.id, precise ? 'PRECISE' : 'APPROXIMATE');
+          consentGranted = true;
+          joinCallSafetySession(current.id);
+          const updated = await refresh(current.id);
+          if (!updated) throw new Error('The session could not be verified after consent.');
+          await armCallSafetyLocationTracking({
+            session: updated,
+            userId: currentUserId,
+            mode: permission.mode,
+          });
+        } catch (caught) {
+          if (consentGranted) {
+            await Promise.allSettled([
+              stopCallSafetyLocationTracking(current.id),
+              revokeCallSafetyConsent(current.id),
+            ]);
+            await refresh(current.id).catch(() => null);
+          }
+          throw caught;
+        }
       },
-      successMessage: 'Your consent was recorded. Location starts only when the session is active.',
+      successMessage:
+        'Your consent was recorded. Location starts only after mutual consent and stops automatically at session expiry.',
     });
   };
 
@@ -299,12 +328,13 @@ export function StayWithMeScreen({ navigation, route }: Props) {
       confirmLabel: 'Yes, stop sharing',
       danger: true,
       operation: async () => {
-        locationSubscription.current?.remove();
-        locationSubscription.current = null;
-        await revokeCallSafetyConsent(current.id);
+        await requireSafetyActions(
+          [stopCallSafetyLocationTracking(current.id), revokeCallSafetyConsent(current.id)],
+          'Location sharing could not be stopped completely.',
+        );
         await refresh(current.id);
       },
-      successMessage: 'Location sharing stopped successfully.',
+      successMessage: 'Location sharing stopped successfully for both participants.',
     });
   };
 
@@ -319,9 +349,10 @@ export function StayWithMeScreen({ navigation, route }: Props) {
       confirmLabel: 'Yes, delete',
       danger: true,
       operation: async () => {
-        locationSubscription.current?.remove();
-        locationSubscription.current = null;
-        await purgeCallSafetyLocation(current.id);
+        await requireSafetyActions(
+          [stopCallSafetyLocationTracking(current.id), purgeCallSafetyLocation(current.id)],
+          'Location tracking stopped, but stored coordinates could not be fully purged.',
+        );
         setCurrent(null);
       },
       successMessage: 'Your stored session coordinates were permanently deleted.',
@@ -367,9 +398,10 @@ export function StayWithMeScreen({ navigation, route }: Props) {
       confirmLabel: 'Yes, end session',
       danger: true,
       operation: async () => {
-        locationSubscription.current?.remove();
-        locationSubscription.current = null;
-        await endCallSafetySession(current.id);
+        await requireSafetyActions(
+          [stopCallSafetyLocationTracking(current.id), endCallSafetySession(current.id)],
+          'The session could not be ended completely.',
+        );
         setCurrent(null);
       },
       successMessage: 'The Stay With Me session ended.',
@@ -454,6 +486,30 @@ export function StayWithMeScreen({ navigation, route }: Props) {
               />
             </View>
           ) : null}
+          {ownConsentActive ? (
+            <View style={[styles.locationNotice, { backgroundColor: theme.colors.background }]}>
+              <MapPin
+                size={18}
+                color={currentTrackingStatus === 'IDLE' ? palette.amber : palette.teal}
+              />
+              <View style={styles.flex}>
+                <AtlasText variant="caption">
+                  {currentTrackingStatus === 'BACKGROUND'
+                    ? 'Background location sharing is active.'
+                    : currentTrackingStatus === 'FOREGROUND'
+                      ? 'Location sharing is active while Atlas is open.'
+                      : currentTrackingStatus === 'ARMED'
+                        ? 'Consent saved. Location is off while mutual consent is pending.'
+                        : 'Location sharing is not running on this device.'}
+                </AtlasText>
+                {trackingState.sessionId === current.id && trackingState.lastError ? (
+                  <AtlasText variant="micro" color={palette.red}>
+                    {trackingState.lastError}
+                  </AtlasText>
+                ) : null}
+              </View>
+            </View>
+          ) : null}
           {remoteLocation ? (
             <View style={[styles.locationNotice, { backgroundColor: theme.colors.background }]}>
               <MapPin size={18} color={palette.teal} />
@@ -486,12 +542,29 @@ export function StayWithMeScreen({ navigation, route }: Props) {
                     Turn off to share an intentionally blurred area.
                   </AtlasText>
                 </View>
-                <Switch value={precise} onValueChange={setPrecise} />
+                <Switch value={precise} disabled={ownConsentActive} onValueChange={setPrecise} />
+              </View>
+              <View style={styles.consentRow}>
+                <View style={styles.flex}>
+                  <AtlasText variant="label">Continue in background</AtlasText>
+                  <AtlasText variant="caption" color={theme.colors.textMuted}>
+                    {Platform.OS === 'web'
+                      ? 'Unavailable in the web preview. Use a native Atlas build.'
+                      : 'Optional. Your phone shows a system indicator and you can stop at any time.'}
+                  </AtlasText>
+                </View>
+                <Switch
+                  accessibilityLabel="Continue Stay With Me location in background"
+                  value={continueInBackground}
+                  disabled={ownConsentActive || Platform.OS === 'web'}
+                  onValueChange={setContinueInBackground}
+                />
               </View>
               <Button
-                label="Grant my consent"
+                label={ownConsentActive ? 'My consent is active' : 'Grant my consent'}
                 icon={UserRoundCheck}
                 loading={loading || currentAction === 'consent'}
+                disabled={ownConsentActive}
                 onPress={() => void consent()}
               />
               <Button
@@ -516,9 +589,12 @@ export function StayWithMeScreen({ navigation, route }: Props) {
                 }
               />
               <Button
-                label="Emergency SOS"
+                label={
+                  current.status === 'ACTIVE' ? 'Emergency SOS' : 'Emergency SOS (session inactive)'
+                }
                 variant="danger"
                 loading={currentAction === 'sos'}
+                disabled={current.status !== 'ACTIVE'}
                 onPress={escalateSos}
               />
               <Button

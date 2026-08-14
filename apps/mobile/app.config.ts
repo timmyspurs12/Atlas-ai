@@ -25,7 +25,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       'expo-location',
       {
         locationAlwaysAndWhenInUsePermission:
-          'Atlas AI uses your location only while you explicitly share it or record a trip. You can stop sharing at any time.',
+          'Atlas AI uses background location only during an active share or mutually consented Stay With Me session. You can stop at any time.',
         isAndroidBackgroundLocationEnabled: true,
         isIosBackgroundLocationEnabled: true,
       },
@@ -67,9 +67,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       infoPlist: {
         UIBackgroundModes: ['location', 'remote-notification'],
         NSLocationWhenInUseUsageDescription:
-          'Atlas AI uses location only when you ask to share it or record a trip.',
+          'Atlas AI uses location only when you explicitly share it, record a trip, or activate Stay With Me.',
         NSLocationAlwaysAndWhenInUseUsageDescription:
-          'Allow background location so an active share can continue while Atlas AI is not open.',
+          'Allow background location only if you choose it for an active share or mutually consented Stay With Me session.',
         NSMicrophoneUsageDescription:
           'Atlas AI uses the microphone only when you record a voice note.',
       },

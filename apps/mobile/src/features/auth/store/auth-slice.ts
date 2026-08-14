@@ -1,6 +1,11 @@
 import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { AuthSession, SessionUser } from '@atlas/contracts';
-import { AtlasApiError } from '@/shared/api/api-client';
+import {
+  revokeAndStopCallSafetyLocationTracking,
+  stopCallSafetyLocationTracking,
+} from '@/features/call-safety/services/call-safety-location';
+import { stopLiveLocationTracking } from '@/features/location/services/location-service';
+import { apiRequest, AtlasApiError } from '@/shared/api/api-client';
 import { sessionStorage } from '@/shared/storage';
 import * as authService from '../services/auth-service';
 
@@ -88,8 +93,17 @@ export const socialLoginUser = createAsyncThunk(
 
 export const logoutUser = createAsyncThunk('auth/logout', async (_, { getState }) => {
   const state = getState() as { auth: AuthState };
-  if (state.auth.mode === 'live') await authService.logout();
-  else await sessionStorage.clearSession();
+  if (state.auth.mode === 'live') {
+    await Promise.allSettled([
+      revokeAndStopCallSafetyLocationTracking(),
+      stopLiveLocationTracking(),
+      apiRequest('/locations/shares', { method: 'DELETE' }),
+    ]);
+    await authService.logout();
+  } else {
+    await Promise.allSettled([stopCallSafetyLocationTracking(), stopLiveLocationTracking()]);
+    await sessionStorage.clearSession();
+  }
 });
 
 const authSlice = createSlice({

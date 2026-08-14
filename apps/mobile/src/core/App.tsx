@@ -24,8 +24,13 @@ import Animated, { FadeIn, FadeOut, ZoomIn } from 'react-native-reanimated';
 import atlasIcon from '../../assets/icon.png';
 import { AtlasText } from '@/components/ui/AtlasText';
 import { bootstrapSession } from '@/features/auth/store/auth-slice';
+import {
+  reconcileCallSafetyLocationTracking,
+  stopCallSafetyLocationTracking,
+} from '@/features/call-safety/services/call-safety-location';
 import { AppNavigator } from '@/navigation/AppNavigator';
 import { palette } from '@/shared/config/theme';
+import { useAppSelector } from '@/shared/hooks/redux';
 import { useAtlasTheme } from '@/shared/hooks/use-atlas-theme';
 import { store } from './store';
 
@@ -47,6 +52,9 @@ onlineManager.setEventListener((setOnline) => {
 
 function AtlasApp() {
   const theme = useAtlasTheme();
+  const authStatus = useAppSelector((state) => state.auth.status);
+  const authMode = useAppSelector((state) => state.auth.mode);
+  const currentUserId = useAppSelector((state) => state.auth.session?.user.id ?? null);
   const [minimumSplashDone, setMinimumSplashDone] = useState(false);
   const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
@@ -64,9 +72,25 @@ function AtlasApp() {
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (status) => {
       if (Platform.OS !== 'web') focusManager.setFocused(status === 'active');
+      if (
+        status === 'active' &&
+        authStatus === 'signedIn' &&
+        authMode === 'live' &&
+        currentUserId
+      ) {
+        void reconcileCallSafetyLocationTracking(currentUserId).catch(() => undefined);
+      }
     });
     return () => subscription.remove();
-  }, []);
+  }, [authMode, authStatus, currentUserId]);
+
+  useEffect(() => {
+    if (authStatus === 'signedIn' && authMode === 'live' && currentUserId) {
+      void reconcileCallSafetyLocationTracking(currentUserId).catch(() => undefined);
+    } else if (authStatus === 'signedOut' || authMode === 'demo') {
+      void stopCallSafetyLocationTracking().catch(() => undefined);
+    }
+  }, [authMode, authStatus, currentUserId]);
 
   useEffect(() => {
     if (fontsLoaded || fontError) void ExpoSplashScreen.hideAsync();
