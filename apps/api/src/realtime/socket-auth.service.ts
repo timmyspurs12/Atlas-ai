@@ -7,6 +7,10 @@ import { PrismaService } from '../database/prisma.service';
 import { SessionStatus, UserStatus } from '../generated/prisma/client';
 import type { AccessTokenClaims, AuthPrincipal } from '../modules/auth/auth.types';
 
+interface SocketAuthenticationData {
+  atlasAccessTokenExpiresAt?: number;
+}
+
 @Injectable()
 export class SocketAuthService {
   constructor(
@@ -21,7 +25,10 @@ export class SocketAuthService {
       secret: this.config.get('JWT_ACCESS_SECRET', { infer: true }),
       algorithms: ['HS256'],
     });
-    if (claims.type !== 'access') throw new UnauthorizedException('Wrong token type');
+    if (claims.type !== 'access' || typeof claims.exp !== 'number') {
+      throw new UnauthorizedException('Wrong token type');
+    }
+    this.data(client).atlasAccessTokenExpiresAt = claims.exp * 1_000;
     const session = await this.prisma.session.findFirst({
       where: {
         id: claims.sid,
@@ -41,6 +48,36 @@ export class SocketAuthService {
       deviceId: session.deviceId,
       role: session.user.role,
     };
+  }
+
+  async assertActive(client: Socket, principal: AuthPrincipal): Promise<void> {
+    const expiresAt = this.data(client).atlasAccessTokenExpiresAt;
+    if (typeof expiresAt !== 'number' || expiresAt <= Date.now()) {
+      this.reject(client, 'Access token expired');
+    }
+    const session = await this.prisma.session.findFirst({
+      where: {
+        id: principal.sessionId,
+        userId: principal.userId,
+        deviceId: principal.deviceId,
+        status: SessionStatus.ACTIVE,
+        expiresAt: { gt: new Date() },
+        deletedAt: null,
+        user: { status: UserStatus.ACTIVE, deletedAt: null },
+      },
+      select: { id: true },
+    });
+    if (!session) this.reject(client, 'Inactive session');
+  }
+
+  private reject(client: Socket, message: string): never {
+    client.emit('auth:error', { code: 'UNAUTHORIZED', message });
+    client.disconnect(true);
+    throw new UnauthorizedException(message);
+  }
+
+  private data(client: Socket): SocketAuthenticationData {
+    return client.data as SocketAuthenticationData;
   }
 
   private extractToken(client: Socket): string {

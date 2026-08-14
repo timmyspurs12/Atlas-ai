@@ -90,3 +90,45 @@ jobs:
       - run: npm ci
       - run: npm run prisma:deploy --workspace @atlas/api
       - run: npm run prisma:seed --workspace @atlas/api
+
+  call-safety-e2e:
+    name: Stay With Me REST and Socket.IO authorization
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: atlas
+          POSTGRES_PASSWORD: atlas_e2e
+          POSTGRES_DB: atlas_e2e
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U atlas -d atlas_e2e"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+      redis:
+        image: redis:8.2-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://atlas:atlas_e2e@127.0.0.1:5432/atlas_e2e?schema=public
+      ATLAS_E2E_DATABASE_URL: postgresql://atlas:atlas_e2e@127.0.0.1:5432/atlas_e2e?schema=public
+      REDIS_URL: redis://127.0.0.1:6379/15
+      ATLAS_E2E_REDIS_URL: redis://127.0.0.1:6379/15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+          cache: npm
+      - run: npm ci
+      - run: npm run db:generate
+      - run: npm run prisma:deploy --workspace @atlas/api
+      - run: npm run test:e2e

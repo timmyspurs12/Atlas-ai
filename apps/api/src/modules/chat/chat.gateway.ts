@@ -57,7 +57,7 @@ export class ChatGateway implements OnGatewayConnection {
     @MessageBody() input: SocketSendMessageDto,
   ): Promise<Record<string, unknown>> {
     try {
-      const userId = this.userId(client);
+      const userId = await this.authorizedUserId(client);
       const message = await this.chat.send(userId, input.conversationId, input);
       const memberIds = await this.chat.memberIds(userId, input.conversationId);
       memberIds.forEach((memberId) => {
@@ -94,7 +94,7 @@ export class ChatGateway implements OnGatewayConnection {
     @MessageBody() input: SocketReadMessageDto,
   ): Promise<{ ok: true }> {
     try {
-      const userId = this.userId(client);
+      const userId = await this.authorizedUserId(client);
       await this.chat.markRead(userId, input.conversationId, input.messageId);
       const members = await this.chat.memberIds(userId, input.conversationId);
       members.forEach((memberId) => {
@@ -117,7 +117,7 @@ export class ChatGateway implements OnGatewayConnection {
     isTyping: boolean,
   ): Promise<{ ok: true }> {
     try {
-      const userId = this.userId(client);
+      const userId = await this.authorizedUserId(client);
       const members = await this.chat.memberIds(userId, conversationId);
       members
         .filter((memberId) => memberId !== userId)
@@ -134,9 +134,10 @@ export class ChatGateway implements OnGatewayConnection {
     }
   }
 
-  private userId(client: AuthenticatedSocket): string {
+  private async authorizedUserId(client: AuthenticatedSocket): Promise<string> {
     const principal = this.socketData(client).principal;
     if (!principal) throw new WsException('Authentication required');
+    await this.socketAuth.assertActive(client, principal);
     return principal.userId;
   }
 

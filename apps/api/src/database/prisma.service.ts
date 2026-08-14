@@ -18,7 +18,11 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     super({
       adapter,
       log:
-        config.get('NODE_ENV', { infer: true }) === 'development' ? ['warn', 'error'] : ['error'],
+        config.get('NODE_ENV', { infer: true }) === 'development'
+          ? ['warn', 'error']
+          : config.get('NODE_ENV', { infer: true }) === 'test'
+            ? []
+            : ['error'],
     });
   }
 

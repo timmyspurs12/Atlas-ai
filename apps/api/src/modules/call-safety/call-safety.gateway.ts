@@ -67,6 +67,7 @@ export class CallSafetyGateway implements OnGatewayConnection {
   ): Promise<{ joined: true; sessionId: string }> {
     try {
       const principal = this.principal(client);
+      await this.auth.assertActive(client, principal);
       await this.safety.participantIds(input.sessionId, principal.userId);
       await client.join(this.room(input.sessionId));
       this.data(client).sessionIds?.add(input.sessionId);
@@ -84,6 +85,7 @@ export class CallSafetyGateway implements OnGatewayConnection {
   ): Promise<{ accepted: true; sequence: number }> {
     try {
       const principal = this.principal(client);
+      await this.auth.assertActive(client, principal);
       if (!this.data(client).sessionIds?.has(input.sessionId)) {
         throw new WsException('Join the session before sending location');
       }

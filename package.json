@@ -20,6 +20,8 @@
     "typecheck": "npm run build --workspace @atlas/contracts && npm run typecheck --workspaces --if-present",
     "lint": "node --max-old-space-size=4096 ./node_modules/eslint/bin/eslint.js apps packages --max-warnings=0",
     "test": "npm run test --workspaces --if-present",
+    "test:e2e": "npm run test:e2e --workspace @atlas/api",
+    "test:e2e:local": "node scripts/test-call-safety-e2e.mjs",
     "test:ci": "npm run test --workspaces --if-present -- --runInBand",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
