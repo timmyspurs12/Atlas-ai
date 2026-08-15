@@ -5,6 +5,7 @@ const environment = process.env as unknown as Record<string, string | undefined>
 export default ({ config }: ConfigContext): ExpoConfig => {
   const plugins: ExpoConfig['plugins'] = [
     'expo-secure-store',
+    'expo-image',
     [
       'expo-splash-screen',
       {
