@@ -9,6 +9,7 @@ export type RootStackParamList = {
   Assistant: undefined;
   Geofences: undefined;
   Safety: undefined;
+  StayWithMe: { invitationToken?: string; invitationId?: string } | undefined;
 };
 
 export type MainTabParamList = {

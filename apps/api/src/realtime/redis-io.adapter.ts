@@ -26,6 +26,29 @@ export class RedisIoAdapter extends IoAdapter {
     this.adapterConstructor = createAdapter(this.publishClient, this.subscribeClient);
   }
 
+  async disconnectFromRedis(): Promise<void> {
+    const clients = [this.publishClient, this.subscribeClient].filter((client): client is Redis =>
+      Boolean(client),
+    );
+    this.publishClient = undefined;
+    this.subscribeClient = undefined;
+    this.adapterConstructor = undefined;
+    await Promise.allSettled(
+      clients.map(async (client) => {
+        if (client.status === 'end') return;
+        if (client.status !== 'ready') {
+          client.disconnect(false);
+          return;
+        }
+        try {
+          await client.quit();
+        } catch {
+          client.disconnect(false);
+        }
+      }),
+    );
+  }
+
   override createIOServer(port: number, options?: ServerOptions): unknown {
     const server = super.createIOServer(port, options) as {
       adapter: (adapter: ReturnType<typeof createAdapter>) => void;

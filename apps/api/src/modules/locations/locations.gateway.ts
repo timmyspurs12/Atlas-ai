@@ -93,6 +93,7 @@ export class LocationsGateway implements OnGatewayConnection, OnGatewayDisconnec
     @ConnectedSocket() client: AuthenticatedSocket,
   ): Promise<{ ok: true; serverTime: string }> {
     const principal = this.principal(client);
+    await this.socketAuth.assertActive(client, principal);
     await this.markPresent(principal.userId);
     return { ok: true, serverTime: new Date().toISOString() };
   }
@@ -104,7 +105,9 @@ export class LocationsGateway implements OnGatewayConnection, OnGatewayDisconnec
     @MessageBody() input: LocationUpdateDto,
   ): Promise<{ accepted: boolean; sequence: number }> {
     try {
-      const broadcast = await this.locations.ingest(this.principal(client), input);
+      const principal = this.principal(client);
+      await this.socketAuth.assertActive(client, principal);
+      const broadcast = await this.locations.ingest(principal, input);
       if (broadcast) this.broadcast(broadcast);
       return { accepted: Boolean(broadcast), sequence: input.sequence };
     } catch (error) {

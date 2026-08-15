@@ -137,15 +137,16 @@ export function PeopleScreen() {
       </View>
       <View style={styles.list}>
         {filtered.map((person) => (
-          <Pressable
-            key={person.id}
-            accessibilityRole="button"
-            onPress={() => {
-              selectPerson(person.id);
-              navigation.navigate('Main');
-            }}
-          >
-            <Card style={styles.personRow}>
+          <Card key={person.id} style={styles.personRow}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Open ${person.name} on the map`}
+              onPress={() => {
+                selectPerson(person.id);
+                navigation.navigate('Main');
+              }}
+              style={styles.personMain}
+            >
               <Avatar
                 name={person.name}
                 color={person.color}
@@ -164,30 +165,30 @@ export function PeopleScreen() {
                   {person.place.toUpperCase()}
                 </AtlasText>
               </View>
-              <View style={styles.personMeta}>
-                <View style={styles.battery}>
-                  <BatteryMedium
-                    size={14}
-                    color={
-                      person.batteryPct && person.batteryPct < 35
-                        ? palette.amber
-                        : theme.colors.textMuted
-                    }
-                  />
-                  <AtlasText variant="caption" color={theme.colors.textMuted}>
-                    {person.batteryPct}%
-                  </AtlasText>
-                </View>
-                <IconButton
-                  icon={MessageCircle}
-                  label={`Message ${person.firstName}`}
-                  onPress={() => navigation.navigate('Chat', { title: person.name })}
-                  size={36}
-                  iconSize={17}
+            </Pressable>
+            <View style={styles.personMeta}>
+              <View style={styles.battery}>
+                <BatteryMedium
+                  size={14}
+                  color={
+                    person.batteryPct && person.batteryPct < 35
+                      ? palette.amber
+                      : theme.colors.textMuted
+                  }
                 />
+                <AtlasText variant="caption" color={theme.colors.textMuted}>
+                  {person.batteryPct}%
+                </AtlasText>
               </View>
-            </Card>
-          </Pressable>
+              <IconButton
+                icon={MessageCircle}
+                label={`Message ${person.firstName}`}
+                onPress={() => navigation.navigate('Chat', { title: person.name })}
+                size={36}
+                iconSize={17}
+              />
+            </View>
+          </Card>
         ))}
       </View>
 
@@ -273,6 +274,7 @@ const styles = StyleSheet.create({
   sectionHeader: { alignItems: 'flex-end', flexDirection: 'row', justifyContent: 'space-between' },
   list: { gap: spacing.sm },
   personRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
+  personMain: { alignItems: 'center', flex: 1, flexDirection: 'row', gap: spacing.sm },
   personText: { flex: 1, gap: 1 },
   personName: { alignItems: 'center', flexDirection: 'row', gap: 6 },
   movingDot: { backgroundColor: palette.green, borderRadius: 4, height: 7, width: 7 },

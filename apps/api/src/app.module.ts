@@ -10,6 +10,7 @@ import { validateEnvironment } from './config/environment';
 import { DatabaseModule } from './database/database.module';
 import { AiModule } from './modules/ai/ai.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { CallSafetyModule } from './modules/call-safety/call-safety.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { FriendsModule } from './modules/friends/friends.module';
 import { GeofencesModule } from './modules/geofences/geofences.module';
@@ -42,6 +43,7 @@ import { RealtimeModule } from './realtime/realtime.module';
     GeofencesModule,
     LocationsModule,
     SafetyModule,
+    CallSafetyModule,
     ChatModule,
     NotificationsModule,
     AiModule,

@@ -8,6 +8,7 @@ import {
   Layers3,
   MessageCircle,
   Navigation2,
+  PhoneCall,
   Radio,
   Share2,
   ShieldAlert,
@@ -139,11 +140,18 @@ export function HomeScreen() {
               </AtlasText>
             </View>
           </View>
-          <IconButton
-            icon={Bell}
-            label="Notifications"
-            onPress={() => navigation.navigate('Notifications')}
-          />
+          <View style={styles.topActions}>
+            <IconButton
+              icon={PhoneCall}
+              label="Start Stay With Me"
+              onPress={() => navigation.navigate('StayWithMe')}
+            />
+            <IconButton
+              icon={Bell}
+              label="Notifications"
+              onPress={() => navigation.navigate('Notifications')}
+            />
+          </View>
         </View>
 
         <View style={styles.statusRow}>
@@ -291,6 +299,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
     paddingTop: spacing.xs,
+  },
+  topActions: {
+    flexDirection: 'row',
+    gap: spacing.xs,
   },
   greeting: {
     alignItems: 'center',

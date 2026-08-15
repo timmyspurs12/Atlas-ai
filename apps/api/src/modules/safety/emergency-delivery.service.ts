@@ -4,6 +4,7 @@ import { cert, getApps, initializeApp } from 'firebase-admin/app';
 import { getMessaging } from 'firebase-admin/messaging';
 import type { Environment } from '../../config/environment';
 import { PrismaService } from '../../database/prisma.service';
+import { isExpoPushToken } from '../notifications/domain/call-safety-invitation-notification.policy';
 
 export interface EmergencyDeliveryRequest {
   recipientUserId?: string | null;
@@ -47,32 +48,70 @@ export class EmergencyDeliveryService {
   }
 
   private async push(userId: string, senderName: string, url: string): Promise<[string, boolean]> {
+    const devices = await this.prisma.device.findMany({
+      where: { userId, pushEnabled: true, pushToken: { not: null }, deletedAt: null },
+      select: { id: true, pushToken: true },
+    });
+    const tokens = devices.flatMap((device) => (device.pushToken ? [device.pushToken] : []));
+    if (tokens.length === 0) return ['push', false];
+
+    const expoTokens = tokens.filter(isExpoPushToken);
+    const nativeTokens = tokens.filter((token) => !isExpoPushToken(token));
+    const results: boolean[] = [];
+
+    if (expoTokens.length > 0 && this.config.get('EXPO_PUSH_ENABLED', { infer: true })) {
+      try {
+        const accessToken = this.config.get('EXPO_ACCESS_TOKEN', { infer: true });
+        const response = await fetch('https://exp.host/--/api/v2/push/send', {
+          method: 'POST',
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          },
+          body: JSON.stringify(
+            expoTokens.slice(0, 100).map((token) => ({
+              to: token,
+              title: `SOS from ${senderName}`,
+              body: 'Open Atlas AI to see their live safety alert.',
+              sound: 'default',
+              priority: 'high',
+              data: { type: 'SOS', url },
+            })),
+          ),
+          signal: AbortSignal.timeout(8_000),
+        });
+        results.push(response.ok);
+      } catch {
+        results.push(false);
+      }
+    }
+
     const credentials = {
       projectId: this.config.get('FCM_PROJECT_ID', { infer: true }),
       clientEmail: this.config.get('FCM_CLIENT_EMAIL', { infer: true }),
       privateKey: this.config.get('FCM_PRIVATE_KEY', { infer: true })?.replace(/\\n/g, '\n'),
     };
-    if (!credentials.projectId || !credentials.clientEmail || !credentials.privateKey) {
-      return ['push', false];
+    if (
+      nativeTokens.length > 0 &&
+      credentials.projectId &&
+      credentials.clientEmail &&
+      credentials.privateKey
+    ) {
+      if (getApps().length === 0) initializeApp({ credential: cert(credentials) });
+      const result = await getMessaging().sendEachForMulticast({
+        tokens: nativeTokens,
+        notification: {
+          title: `SOS from ${senderName}`,
+          body: 'Open Atlas AI to see their live safety alert.',
+        },
+        data: { type: 'SOS', url },
+        android: { priority: 'high' },
+        apns: { headers: { 'apns-priority': '10' }, payload: { aps: { sound: 'default' } } },
+      });
+      results.push(result.successCount > 0);
     }
-    if (getApps().length === 0) initializeApp({ credential: cert(credentials) });
-    const devices = await this.prisma.device.findMany({
-      where: { userId, pushEnabled: true, pushToken: { not: null }, deletedAt: null },
-      select: { pushToken: true },
-    });
-    const tokens = devices.flatMap((device) => (device.pushToken ? [device.pushToken] : []));
-    if (tokens.length === 0) return ['push', false];
-    const result = await getMessaging().sendEachForMulticast({
-      tokens,
-      notification: {
-        title: `SOS from ${senderName}`,
-        body: 'Open Atlas AI to see their live safety alert.',
-      },
-      data: { type: 'SOS', url },
-      android: { priority: 'high' },
-      apns: { headers: { 'apns-priority': '10' }, payload: { aps: { sound: 'default' } } },
-    });
-    return ['push', result.successCount > 0];
+    return ['push', results.some(Boolean)];
   }
 
   private async sms(phone: string, senderName: string, url: string): Promise<[string, boolean]> {
