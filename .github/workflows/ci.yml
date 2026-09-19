@@ -33,9 +33,11 @@ jobs:
         run: node scripts/audit-ci.mjs
       - run: npm run build --workspace @atlas/api
       - run: npm run build --workspace @atlas/admin
+      # Runs the expo-doctor pinned in apps/mobile/devDependencies, not `npx expo-doctor`.
+      # `npx` silently downloads whatever release is newest on each run, so this step's
+      # verdict drifts with upstream and can turn red with no change in this repo.
       - name: Validate Expo configuration
-        working-directory: apps/mobile
-        run: npx expo-doctor
+        run: npm run doctor --workspace @atlas/mobile
       - name: Export mobile web target
         run: npm run build --workspace @atlas/mobile
       - uses: actions/upload-artifact@v4

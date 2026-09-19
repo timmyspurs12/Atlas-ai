@@ -5,6 +5,11 @@ const environment = process.env as unknown as Record<string, string | undefined>
 export default ({ config }: ConfigContext): ExpoConfig => {
   const plugins: ExpoConfig['plugins'] = [
     'expo-secure-store',
+    // expo-image ships a config plugin, so Expo expects it listed here once the package is
+    // installed — expo-doctor fails the build otherwise. The package is not imported by any
+    // screen yet; removing the dependency entirely would also satisfy the check and is the
+    // better cleanup, but it is unverified against expo-doctor. Tracked separately.
+    'expo-image',
     [
       'expo-splash-screen',
       {
