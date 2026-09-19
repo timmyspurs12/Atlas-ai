@@ -88,10 +88,14 @@ GitHub Free includes **120 core-hours and 15 GB-month per month** (≈ 60 hours 
 size). Set your Codespaces **spending limit to `$0`** in Settings → Billing so it stops rather
 than bills when the quota runs out.
 
-Read **[`docs/codespaces.md`](docs/codespaces.md)** first — it covers sharing a demo via port
-visibility, not burning your quota, and an important caveat: Photon and OSRM are hosted in
-Germany, so latency measured from a Codespace is an _optimistic floor_, not what a user on a
-Nigerian mobile network will actually see.
+Read **[`docs/codespaces.md`](docs/codespaces.md)** first. It covers sharing a demo via port
+visibility, not burning your quota, and — most usefully — **testing an SOS end-to-end for $0**:
+set `DELIVERY_DRY_RUN=true` and an unconfigured channel logs the exact SMS it _would_ have sent,
+so you can read the real alert copy, built from live OpenStreetMap place data, without a Twilio,
+Resend or Firebase account.
+
+One caveat: Photon and OSRM are hosted in Germany, so latency measured from a Codespace is an
+_optimistic floor_, not what a user on a Nigerian mobile network will actually see.
 
 ### Local setup
 

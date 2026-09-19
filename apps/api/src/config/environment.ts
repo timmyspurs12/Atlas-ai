@@ -44,6 +44,20 @@ const environmentSchema = z
     TWILIO_AUTH_TOKEN: z.string().optional(),
     TWILIO_FROM_NUMBER: z.string().optional(),
     RESEND_API_KEY: z.string().optional(),
+    /**
+     * Log the exact alert copy an unconfigured channel *would* have sent, instead of dropping
+     * it silently.
+     *
+     * This exists because SMS, email and push all cost money, and a channel with no
+     * credentials previously returned `false` without emitting a single log line — so the
+     * composed message simply vanished. That made the SOS path untestable without paying a
+     * provider, and in production it meant a typo in `TWILIO_ACCOUNT_SID` would silently stop
+     * every emergency SMS with no diagnostic anywhere.
+     *
+     * Recipients are masked and coordinates are never logged. Safe to leave on in
+     * development; off by default in production because alert copy is personal data.
+     */
+    DELIVERY_DRY_RUN: booleanFromString,
     GOOGLE_CLIENT_ID: z.string().optional(),
     GOOGLE_CLIENT_IDS: z.string().optional(),
     APPLE_CLIENT_ID: z.string().default('com.atlasai.app'),

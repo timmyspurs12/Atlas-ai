@@ -26,7 +26,7 @@ Before you do, set two things once and forget them:
 - **Settings → Billing → Spending limits → set Codespaces to `$0`.** This is the important one.
   With a $0 spending limit, Codespaces simply stops when your free quota runs out instead of
   charging you. There is no scenario where you get an unexpected bill.
-- **Default region.** Pick one and keep it (see the latency caveat in §5).
+- **Default region.** Pick one and keep it (see the latency caveat in §6).
 
 The repo ships a `.devcontainer/`, so Codespaces uses it automatically: Node 22, Postgres 17.5
 and Redis 8.2 as sibling containers, and the ports pre-forwarded.
@@ -64,7 +64,123 @@ through the real production parsers, and prints a report ending with the literal
 contact would receive. Read `apps/api/src/modules/geo-proxy/README.md` for what each line
 means.
 
-## 4. Run the full stack
+## 4. Test the SOS end-to-end for $0
+
+This is the part worth setting up for. SMS, email and push all cost money, so you might expect
+that testing an SOS requires a Twilio account. It does not.
+
+Set `DELIVERY_DRY_RUN=true` and an unconfigured channel **logs the exact message it would have
+sent** instead of dropping it. You get the real composed SMS text, built from the real
+coordinates, using the real place name resolved from live OpenStreetMap data — with no provider
+account and no spend.
+
+> **The seeded contact cannot receive SMS.** `apps/api/prisma/seed.ts` creates the demo
+> emergency contact with `notifyPush: true` only — no phone number, and `notifySms` defaults to
+> `false`. `triggerSos` skips any channel whose flag is off, so the SMS path is never reached
+> and nothing is logged. Step 3 below fixes that. Without it you will see no dry-run output and
+> could easily conclude the feature is broken when it is simply never being called.
+
+### 1. Enable dry run
+
+```bash
+cd apps/api
+sed -i 's/^DELIVERY_DRY_RUN=false/DELIVERY_DRY_RUN=true/' .env
+```
+
+### 2. Seed the demo data
+
+```bash
+cd ../..
+npm run db:seed
+```
+
+That creates four users (`maya@demo.atlas`, `sarah@demo.atlas`, `john@demo.atlas`,
+`leo@demo.atlas`), all with the password **`AtlasDemo2026!`**, and makes Sarah a verified
+emergency contact of Maya.
+
+### 3. Give the contact a phone number and turn on SMS + email
+
+```bash
+cd apps/api
+npx prisma db execute --stdin <<'SQL'
+UPDATE emergency_contacts
+   SET phone = '+2348031234567',
+       email = 'sarah@demo.atlas',
+       "notifySms" = true,
+       "notifyEmail" = true
+ WHERE name = 'Sarah Chen';
+SQL
+```
+
+The double quotes around `"notifySms"` are required — Postgres folds unquoted identifiers to
+lowercase, and Prisma created these columns in camelCase.
+
+### 4. Start the API and raise an SOS
+
+In one terminal:
+
+```bash
+npm run dev:api
+```
+
+In another:
+
+```bash
+TOKEN=$(curl -s -X POST http://localhost:4000/v1/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"maya@demo.atlas","password":"AtlasDemo2026!"}' \
+  | node -pe 'JSON.parse(require("fs").readFileSync(0)).accessToken')
+
+echo "token: ${TOKEN:0:24}..."
+
+REQ_ID=$(node -e 'process.stdout.write(crypto.randomUUID())')
+
+curl -s -X POST http://localhost:4000/v1/safety/sos \
+  -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"clientRequestId":"'"$REQ_ID"'","latitude":11.8467,"longitude":13.1571,"accuracyM":25,"message":"Codespaces test"}'
+```
+
+The `'"$REQ_ID"'` splice is deliberate: it closes the single-quoted JSON, inserts the shell
+variable in double quotes, and reopens — the only reliable way to interpolate into a
+single-quoted JSON body.
+
+Those coordinates are Gamboru Market in Maiduguri.
+
+### 5. Read the API terminal
+
+```
+WARN  sms delivery skipped: not configured (missing TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN,
+      TWILIO_FROM_NUMBER). This alert was NOT sent by sms.
+WARN  [DRY RUN] sms would have sent to ••••••67: "SOS from Maya Okafor. Near Gamboru Market,
+      Maiduguri, Borno. View their time-limited Atlas safety link: http://localhost:8081/sos/..."
+```
+
+That second line is the actual SMS body a contact would receive. Check three things:
+
+- **Does it name the place?** If it says `Near ...`, the free OSM lookup worked for those
+  coordinates. If the `Near` clause is absent, either Photon had no coverage there or the
+  lookup exceeded `GEO_EMERGENCY_TIMEOUT_MS` — run `npm run test:geo-smoke` to tell which.
+- **Is the location before the URL?** Carriers truncate from the end, so the place must survive.
+- **Is the recipient masked?** You should see `••••••67`, never the full number.
+
+Try other coordinates to probe coverage — Lagos `6.4531,3.3958`, Abuja `9.0765,7.4986`, and a
+deliberately rural point like `11.42,13.62` to confirm the no-place fallback wording still
+reads correctly.
+
+### Why the unconditional warning matters
+
+This is not only a testing convenience. Before this change, a missing or mistyped
+`TWILIO_ACCOUNT_SID` made every emergency SMS fail **silently**: `deliver()` returned
+`{ sms: false }`, which is indistinguishable from a provider rejection. In a safety product
+that is the difference between knowing nobody was notified and not knowing. The warning now
+fires in every environment and names the variables to fix; only the message _copy_ is gated
+behind `DELIVERY_DRY_RUN`, because alert text is personal data and should not sit in production
+logs by default.
+
+---
+
+## 5. Run the full stack
 
 ```bash
 npm run db:seed      # optional sample data
@@ -98,7 +214,7 @@ production deployment. Set it back to private when you are done. `scripts/codesp
 already adds the forwarded mobile and admin origins to `CORS_ORIGINS`, so a public preview
 will not fail on CORS.
 
-## 5. ⚠️ What the timing numbers do and do not prove
+## 6. ⚠️ What the timing numbers do and do not prove
 
 **Photon and the public OSRM instances are hosted on Hetzner in Germany.** Your Codespace is
 not in Germany (unless you chose it), and — far more importantly — **your actual users are in
@@ -139,7 +255,7 @@ delays the SMS by at most that amount and can never prevent the alert from exist
 from 2 s to 4 s costs two seconds of delay and may be the difference between an alert that
 names the place and one that does not.
 
-## 6. Not burning your quota
+## 7. Not burning your quota
 
 - **Use the 2-core machine.** 120 core-hours ÷ 2 = 60 hours. The 4-core size halves that to
   30 hours, and this project does not need it.
@@ -153,7 +269,7 @@ names the place and one that does not.
   ≥ 22.12 and the default image's Node version is not guaranteed to satisfy that.
 - **Check usage** at github.com/settings/billing → Codespaces.
 
-## 7. Troubleshooting
+## 8. Troubleshooting
 
 | Symptom                                                                                 | Fix                                                                                                                                                           |
 | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -165,6 +281,10 @@ names the place and one that does not.
 | Mobile web loads but every API call fails                                               | `EXPO_PUBLIC_API_URL` is still `localhost`. Re-run `node scripts/codespace-env.mjs --force` from _inside_ the Codespace so it picks up the forwarded hostname |
 | API calls fail with a CORS error on a public preview                                    | Same fix — regenerate env so the forwarded origin is in `CORS_ORIGINS`                                                                                        |
 | Smoke test fails with `fetch failed`                                                    | No egress, or a DNS/proxy problem. Confirm with `curl -I https://photon.komoot.io`                                                                            |
+| SOS succeeds but **no `[DRY RUN]` line appears**                                        | The seeded contact has no phone and `notifySms` is `false`, so `sms()` is never called. Run step 3 of §4                                                      |
+| `[DRY RUN] sms` appears but with no `Near ...` clause                                   | Photon found nothing, or the lookup beat the 2 s ceiling. Run `npm run test:geo-smoke` to tell which                                                          |
+| SOS returns `Add a verified emergency contact first`                                    | The seed did not run, or ran against a different database. `npm run db:seed`                                                                                  |
+| Login returns 401 with the demo credentials                                             | The seed password is `AtlasDemo2026!`. If you seeded before, the users already exist with that hash — re-seeding will not change it                           |
 | Smoke test fails only on the rural Borno point                                          | Expected. Coverage gaps are real and the SOS path degrades correctly                                                                                          |
 | Vitest runs stale code after you edit a spec                                            | `rm -rf apps/api/node_modules/.vite`                                                                                                                          |
 
