@@ -40,7 +40,7 @@ jobs:
         run: npm run doctor --workspace @atlas/mobile
       - name: Export mobile web target
         run: npm run build --workspace @atlas/mobile
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: atlas-web-exports
           path: |
