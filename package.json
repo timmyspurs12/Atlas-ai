@@ -25,6 +25,7 @@
     "format:check": "prettier --check .",
     "db:generate": "npm run prisma:generate --workspace @atlas/api",
     "db:migrate": "npm run prisma:migrate --workspace @atlas/api",
+    "db:deploy": "npm run prisma:deploy --workspace @atlas/api",
     "db:seed": "npm run prisma:seed --workspace @atlas/api",
     "compose:up": "docker compose -f infra/docker-compose.yml up -d",
     "compose:down": "docker compose -f infra/docker-compose.yml down",

@@ -72,6 +72,29 @@ The safety features are built on the same rule. An SOS alert reaches the contact
 
 You need **Node.js 22.12+** and **Docker** (for PostgreSQL and Redis).
 
+### ☁️ No local setup? Use GitHub Codespaces (free)
+
+The repo ships a `.devcontainer/`, so opening it in Codespaces gives you Node 22, Postgres and
+Redis with **nothing installed locally** — and, unlike a restricted sandbox, real outbound
+network access so the keyless geo providers and `prisma generate` both work.
+
+**Code** → **Codespaces** → **Create codespace on main**, then:
+
+```bash
+cd apps/api && npm run test:geo-smoke   # verifies the free geo providers, no DB or auth needed
+```
+
+GitHub Free includes **120 core-hours and 15 GB-month per month** (≈ 60 hours at the 2-core
+size). Set your Codespaces **spending limit to `$0`** in Settings → Billing so it stops rather
+than bills when the quota runs out.
+
+Read **[`docs/codespaces.md`](docs/codespaces.md)** first — it covers sharing a demo via port
+visibility, not burning your quota, and an important caveat: Photon and OSRM are hosted in
+Germany, so latency measured from a Codespace is an _optimistic floor_, not what a user on a
+Nigerian mobile network will actually see.
+
+### Local setup
+
 ```bash
 git clone https://github.com/timmyspurs12/Atlas-ai.git
 cd Atlas-ai
