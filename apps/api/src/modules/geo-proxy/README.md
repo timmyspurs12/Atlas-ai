@@ -148,14 +148,64 @@ self-host both — that is what the base URL variables are for.
 | `tsc --noEmit`                                           | **No new errors** against the pre-existing baseline |
 | ESLint (`--max-warnings=0`, type-aware)                  | **Clean**                                           |
 | Prettier                                                 | **Clean**                                           |
-| **Live calls to OSRM / Photon / Nominatim / Open-Meteo** | **NOT VERIFIED**                                    |
+| **Live calls to OSRM / Photon / Nominatim / Open-Meteo** | **NOT VERIFIED — run `npm run test:geo-smoke`**     |
 
 The last row matters. The environment where this module was written had no outbound network
 access to those providers (DNS resolved; TLS connections were refused), so request URLs and
 response parsing were built from the providers' documented API shapes and tested against
 recorded fixture payloads — **not against live responses**.
 
-Before relying on this module, run a smoke test from a machine with normal egress:
+Before relying on this module, verify it from a machine with normal egress.
+
+### Step 1 — provider smoke test (no database, no auth, no Nest)
+
+`geo-smoke.spec.ts` is **skipped unless `GEO_SMOKE=1` is set**, so it never runs in CI or in a
+plain `npm test`. It calls the four providers directly with the same URLs, query strings and
+User-Agent production uses, then runs every live response through the **real** production
+parsers — so a green run means "these bytes parse into these words", not just "HTTP 200".
+
+```bash
+cd apps/api
+npm run test:geo-smoke
+```
+
+Windows `cmd` (no `VAR=value` prefix syntax):
+
+```bat
+set GEO_SMOKE=1 && npx vitest run src/modules/geo-proxy/geo-smoke.spec.ts
+```
+
+Windows PowerShell:
+
+```powershell
+$env:GEO_SMOKE = "1"; npx vitest run src/modules/geo-proxy/geo-smoke.spec.ts
+```
+
+It makes ~12 requests total, is polite to the providers, and prints a report like:
+
+```
+  PASS  photon.komoot.io -> 116.202.51.114 (v4)
+     812ms  Maiduguri — Gamboru Market     "Gamboru Market, Maiduguri, Borno"
+     744ms  Lagos — Balogun Market         "Balogun Market, Lagos"
+    timing: min 690ms / median 780ms / max 1204ms   (SOS ceiling is 2000ms)
+  --- what a real contact would actually receive ---
+  SMS   (127 chars): SOS from Maya Bello. Near Gamboru Market, Maiduguri, Borno. View ...
+```
+
+**Read the timing line carefully.** It is the single most important number in this module for
+the SOS feature: `GEO_EMERGENCY_TIMEOUT_MS` is 2000ms, and above it the place description is
+dropped and the alert falls back to the old link-only wording. A provider that works but
+answers slowly from your region looks identical to one that is broken — the alert just never
+names the place. If the median exceeds the ceiling, raise `GEO_EMERGENCY_TIMEOUT_MS` (it is
+an env var) rather than assuming the feature is live.
+
+The rural/off-grid sample point is allowed to resolve to nothing. That is a _finding to
+report_, not a failure: coverage gaps are real, and the SOS path already degrades correctly
+for them.
+
+### Step 2 — end-to-end through the running API
+
+Once step 1 is green, check the module in situ (needs the database, Prisma client and auth):
 
 ```bash
 npm run dev:api
@@ -170,6 +220,9 @@ curl -s -H "Authorization: Bearer $TOKEN" \
 curl -s -H "Authorization: Bearer $TOKEN" \
   "http://localhost:4000/v1/geo/weather/current?latitude=11.8464&longitude=13.1603"
 ```
+
+To see the SOS path itself, raise an alert at known coordinates with a contact whose SMS you
+can read, and confirm the message names the place.
 
 If OSRM returns an error, the most likely cause is the profile token — check
 `GEO_PROXY_OSRM_*_BASE_URL` against the instance you are using.
