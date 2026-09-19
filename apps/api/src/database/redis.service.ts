@@ -6,9 +6,12 @@ import type { Environment } from '../config/environment';
 @Injectable()
 export class RedisService implements OnModuleDestroy {
   readonly client: Redis;
+  /** True when Redis is not a hard dependency (single-instance Phase 0 hosting). */
+  readonly optional: boolean;
   private readonly logger = new Logger(RedisService.name);
 
   constructor(config: ConfigService<Environment, true>) {
+    this.optional = config.get('REDIS_OPTIONAL', { infer: true });
     this.client = new Redis(config.get('REDIS_URL', { infer: true }), {
       lazyConnect: true,
       maxRetriesPerRequest: 2,

@@ -1,0 +1,44 @@
+{
+  "name": "Atlas AI",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+
+  "forwardPorts": [4000, 8081, 19006, 4173],
+  "portsAttributes": {
+    "4000": { "label": "API", "onAutoForward": "notify" },
+    "8081": { "label": "Mobile (Expo web)", "onAutoForward": "notify" },
+    "19006": { "label": "Expo DevTools", "onAutoForward": "silent" },
+    "4173": { "label": "Admin (preview)", "onAutoForward": "notify" }
+  },
+  // Ports are PRIVATE to your GitHub account by default. To share a live demo, right-click
+  // the port in the Ports panel -> "Port Visibility" -> "Public". See docs/codespaces.md.
+  "otherPortsAttributes": { "onAutoForward": "silent" },
+
+  // Installs dependencies and generates the Prisma client. Postgres and Redis are already
+  // healthy by the time this runs (compose `depends_on` gates container creation).
+  "postCreateCommand": "bash .devcontainer/bootstrap.sh",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "prisma.prisma",
+        "vitest.explorer",
+        "ms-azuretools.vscode-docker"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.codeActionsOnSave": { "source.fixAll.eslint": "explicit" },
+        "typescript.tsdk": "node_modules/typescript/lib"
+      }
+    }
+  },
+
+  "remoteUser": "node",
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {}
+  }
+}

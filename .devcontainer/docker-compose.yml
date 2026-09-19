@@ -1,0 +1,54 @@
+name: atlas-ai-devcontainer
+
+# Postgres and Redis run as sibling services, so the app container reaches them by
+# service name (`postgres`, `redis`) rather than localhost. `scripts/codespace-setup.mjs`
+# rewrites DATABASE_URL and REDIS_URL accordingly.
+services:
+  app:
+    image: mcr.microsoft.com/devcontainers/typescript-node:22
+    volumes:
+      - ../..:/workspaces:cached
+    # The devcontainer owns the lifecycle; keep the container alive.
+    command: sleep infinity
+    environment:
+      NODE_ENV: development
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:17.5-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: atlas
+      POSTGRES_USER: atlas
+      POSTGRES_PASSWORD: atlas_dev_only
+    volumes:
+      - atlas_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U atlas -d atlas']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    security_opt:
+      - no-new-privileges:true
+
+  redis:
+    image: redis:8.2-alpine
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes', '--maxmemory-policy', 'allkeys-lru']
+    volumes:
+      - atlas_redis:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  atlas_postgres:
+  atlas_redis:
