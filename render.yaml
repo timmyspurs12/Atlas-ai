@@ -1,0 +1,83 @@
+# Render Blueprint — Phase 0 ($0) hosting for the Atlas AI API.
+#
+# Scope: the API only. See docs/free-tier-hosting.md for why the admin console and the
+# mobile web export are handled separately, and for the websocket cold-start caveat.
+#
+# Deliberate choices:
+#   - No managed database here. Render's free Postgres expires; use Neon instead so the
+#     data survives and the connection string is portable to Phase 1/2.
+#   - Reuses infra/Dockerfile.api so there is exactly ONE build definition, identical to
+#     what CI builds and what AWS ECS runs in Phase 2.
+#   - REDIS_OPTIONAL=true: one free instance cannot run Redis, and the Socket.IO Redis
+#     adapter only matters when fanning out across multiple API processes.
+#
+# Apply with: Render dashboard -> New -> Blueprint -> select this repo.
+
+services:
+  - type: web
+    name: atlas-api
+    runtime: docker
+    plan: free
+    region: frankfurt # closest free Render region to West Africa; change if needed
+    dockerfilePath: ./infra/Dockerfile.api
+    dockerContext: .
+    # Migrate then serve, matching infra/docker-compose.yml exactly.
+    dockerCommand: npm exec -- prisma migrate deploy && node dist/main.js
+    healthCheckPath: /v1/health/live
+    autoDeploy: true
+    numInstances: 1 # MUST stay at 1 while REDIS_OPTIONAL=true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: API_PORT
+        value: 10000 # Render injects PORT; the app reads API_PORT
+      - key: REDIS_OPTIONAL
+        value: 'true'
+      - key: LOG_LEVEL
+        value: log
+      - key: ACCESS_TOKEN_TTL_SECONDS
+        value: '900'
+      - key: REFRESH_TOKEN_TTL_DAYS
+        value: '30'
+      - key: LOCATION_RETENTION_DAYS
+        value: '30'
+
+      # ---- Set these in the dashboard. Never commit real values. ----
+      # Neon connection string, e.g. postgresql://user:pass@ep-xxx.eu-central-1.aws.neon.tech/atlas?sslmode=require
+      - key: DATABASE_URL
+        sync: false
+      # Generate with: node -e "console.log(require('node:crypto').randomBytes(48).toString('hex'))"
+      - key: JWT_ACCESS_SECRET
+        sync: false
+      - key: REFRESH_TOKEN_PEPPER
+        sync: false
+      # Generate with: node -e "console.log(require('node:crypto').randomBytes(32).toString('base64'))"
+      - key: FIELD_ENCRYPTION_KEY
+        sync: false
+      # Your deployed Expo web / admin origins, comma separated.
+      - key: CORS_ORIGINS
+        sync: false
+      - key: APP_WEB_URL
+        sync: false
+
+      # ---- Optional integrations. Adapters stay disabled until these are set. ----
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_FROM_NUMBER
+        sync: false
+      - key: FCM_PROJECT_ID
+        sync: false
+      - key: FCM_CLIENT_EMAIL
+        sync: false
+      - key: FCM_PRIVATE_KEY
+        sync: false
+      - key: GOOGLE_CLIENT_IDS
+        sync: false
+      - key: SENTRY_DSN
+        sync: false

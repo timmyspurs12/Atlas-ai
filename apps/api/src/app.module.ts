@@ -12,6 +12,7 @@ import { AiModule } from './modules/ai/ai.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { FriendsModule } from './modules/friends/friends.module';
+import { GeoProxyModule } from './modules/geo-proxy/geo-proxy.module';
 import { GeofencesModule } from './modules/geofences/geofences.module';
 import { HealthModule } from './modules/health/health.module';
 import { LocationsModule } from './modules/locations/locations.module';
@@ -40,6 +41,7 @@ import { RealtimeModule } from './realtime/realtime.module';
     FriendsModule,
     TripsModule,
     GeofencesModule,
+    GeoProxyModule,
     LocationsModule,
     SafetyModule,
     ChatModule,

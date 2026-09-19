@@ -14,6 +14,7 @@ import { EmergencyStatus, NotificationType, type Prisma } from '../../generated/
 import type { AuthPrincipal } from '../auth/auth.types';
 import { EmergencyDeliveryService } from './emergency-delivery.service';
 import type { CreateEmergencyContactDto, TriggerSosDto } from './safety.dto';
+import { SosLocationService } from './sos-location.service';
 
 @Injectable()
 export class SafetyService {
@@ -22,6 +23,7 @@ export class SafetyService {
     private readonly config: ConfigService<Environment, true>,
     private readonly delivery: EmergencyDeliveryService,
     private readonly audit: AuditService,
+    private readonly sosLocation: SosLocationService,
   ) {}
 
   async listContacts(userId: string): Promise<Array<Record<string, unknown>>> {
@@ -127,6 +129,11 @@ export class SafetyService {
     const tokenHash = this.hashToken(rawToken);
     const expiresAt = new Date(Date.now() + 24 * 60 * 60_000);
 
+    // Started BEFORE the transaction so the lookup overlaps with database work instead of
+    // adding to it. `describe` never rejects, so this cannot become an unhandled rejection,
+    // and a failure resolves to null rather than affecting the alert.
+    const placePromise = this.sosLocation.describe(input.latitude, input.longitude);
+
     const alert = await this.prisma.$transaction(async (transaction) => {
       const created = await transaction.sosAlert.create({
         data: {
@@ -170,6 +177,10 @@ export class SafetyService {
       return created;
     });
 
+    // Awaited here rather than earlier: the alert is already persisted, so a slow or failed
+    // lookup can never prevent it from existing.
+    const place = await placePromise;
+
     const deliveryResults = await Promise.all(
       contacts.map(async (contact, index) => {
         const state = await this.delivery.deliver({
@@ -182,6 +193,7 @@ export class SafetyService {
           senderName: profile?.displayName ?? 'Your trusted contact',
           message: input.message,
           trackingToken: rawToken,
+          place,
         });
         const recipient = alert.recipients[index];
         if (recipient) {

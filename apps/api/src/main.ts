@@ -69,12 +69,21 @@ async function bootstrap(): Promise<void> {
   });
 
   const socketAdapter = new RedisIoAdapter(app, config);
-  try {
-    await socketAdapter.connectToRedis();
-    app.useWebSocketAdapter(socketAdapter);
-  } catch (error) {
-    if (config.get('NODE_ENV', { infer: true }) === 'production') throw error;
-    logger.warn('Redis Socket.IO adapter unavailable; using single-instance in-memory adapter');
+  const redisOptional = config.get('REDIS_OPTIONAL', { infer: true });
+
+  if (redisOptional) {
+    // Phase 0 single-instance hosting: no Redis fan-out adapter, in-memory Socket.IO only.
+    // Safe ONLY because exactly one API process serves every socket. Presence and realtime
+    // features degrade to single-instance semantics rather than failing.
+    logger.log('REDIS_OPTIONAL=true; using single-instance in-memory Socket.IO adapter');
+  } else {
+    try {
+      await socketAdapter.connectToRedis();
+      app.useWebSocketAdapter(socketAdapter);
+    } catch (error) {
+      if (config.get('NODE_ENV', { infer: true }) === 'production') throw error;
+      logger.warn('Redis Socket.IO adapter unavailable; using single-instance in-memory adapter');
+    }
   }
 
   const port = config.get('API_PORT', { infer: true });

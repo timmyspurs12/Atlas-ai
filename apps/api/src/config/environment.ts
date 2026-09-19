@@ -5,12 +5,27 @@ const booleanFromString = z
   .default('false')
   .transform((value) => value === 'true');
 
+const booleanFromStringDefaultTrue = z
+  .enum(['true', 'false'])
+  .default('true')
+  .transform((value) => value === 'true');
+
 const environmentSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
     API_PORT: z.coerce.number().int().min(1).max(65_535).default(4000),
     DATABASE_URL: z.string().min(1),
     REDIS_URL: z.string().min(1).default('redis://localhost:6379'),
+    /**
+     * Set to `true` only for single-instance Phase 0 hosting (a free tier that runs one API
+     * process and no Redis). It stops readiness from failing when Redis is absent and skips
+     * the Socket.IO Redis fan-out adapter.
+     *
+     * Socket.IO fan-out across multiple API instances REQUIRES Redis. Never enable this when
+     * running more than one instance: presence and realtime events would silently diverge
+     * between instances. See docs/free-tier-hosting.md.
+     */
+    REDIS_OPTIONAL: booleanFromString,
     JWT_ACCESS_SECRET: z.string().min(32),
     REFRESH_TOKEN_PEPPER: z.string().min(32),
     FIELD_ENCRYPTION_KEY: z.string().min(32),
@@ -33,6 +48,44 @@ const environmentSchema = z
     GOOGLE_CLIENT_IDS: z.string().optional(),
     APPLE_CLIENT_ID: z.string().default('com.atlasai.app'),
     TRUST_PROXY: booleanFromString,
+
+    /**
+     * Geo proxy: keyless public providers for routing, geocoding and weather.
+     *
+     * Base URLs are operator configuration, never client input — that separation is the
+     * proxy's SSRF defence. Point them at your own OSRM/Nominatim instances in Phase 1+.
+     * The identifying User-Agent is required by OpenStreetMap's usage policy; keep a
+     * contact URL in it.
+     */
+    GEO_PROXY_ENABLED: booleanFromStringDefaultTrue,
+    GEO_PROXY_USER_AGENT: z
+      .string()
+      .min(1)
+      .default('AtlasAI/0.1 (+https://github.com/timmyspurs12/Atlas-ai)'),
+    /** Hard per-provider ceiling on upstream calls per UTC day. Degrades, never overruns. */
+    GEO_PROXY_DAILY_BUDGET: z.coerce.number().int().min(0).max(1_000_000).default(2_000),
+    // Each value is a COMPLETE route prefix ending in the OSRM profile token, because the
+    // token depends on how the instance was compiled (`driving`, `bike`, `foot`, ...). Keeping
+    // it configurable means an operator can point Atlas at a self-hosted OSRM without a code
+    // change. The provider appends only `/{coordinates}` and the query string.
+    GEO_PROXY_OSRM_CAR_BASE_URL: z
+      .url()
+      .default('https://routing.openstreetmap.de/routed-car/route/v1/driving'),
+    GEO_PROXY_OSRM_BIKE_BASE_URL: z
+      .url()
+      .default('https://routing.openstreetmap.de/routed-bike/route/v1/bike'),
+    GEO_PROXY_OSRM_FOOT_BASE_URL: z
+      .url()
+      .default('https://routing.openstreetmap.de/routed-foot/route/v1/foot'),
+    GEO_PROXY_PHOTON_BASE_URL: z.url().default('https://photon.komoot.io'),
+    GEO_PROXY_NOMINATIM_BASE_URL: z.url().default('https://nominatim.openstreetmap.org'),
+    GEO_PROXY_OPEN_METEO_BASE_URL: z.url().default('https://api.open-meteo.com'),
+    /**
+     * Hard ceiling for the SOS place lookup. Ordinary geo calls allow 12 s; an emergency
+     * must not. The SOS flow degrades to coordinates-only if this is exceeded, so the value
+     * is a trade-off between a useful street name and time-to-notify.
+     */
+    GEO_EMERGENCY_TIMEOUT_MS: z.coerce.number().int().min(250).max(10_000).default(2_000),
   })
   .superRefine((env, context) => {
     if (env.NODE_ENV !== 'production') return;
