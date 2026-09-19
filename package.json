@@ -32,7 +32,13 @@
     "prepare": "npm run build --workspace @atlas/contracts && npm run db:generate --if-present"
   },
   "overrides": {
+    "@xmldom/xmldom": "^0.9.12",
+    "deepmerge-ts": "^8.0.0",
+    "fast-uri": "^3.1.6",
     "js-yaml": "5.2.3",
+    "multer": "^2.3.0",
+    "mysql2": "^3.23.1",
+    "nanoid": "^3.3.18",
     "react-native-gesture-handler": "2.32.0",
     "react-native-reanimated": "4.5.1",
     "react-native-safe-area-context": "5.7.0",
